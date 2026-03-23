@@ -1,0 +1,31 @@
+"""
+constants.py — Shared Vocabulary
+
+BACAB Layer: Utils (cross-cutting)
+
+Responsibility:
+    Defines the canonical vocabulary shared across the intelligence service:
+    artifact types, statuses, and event types. These constants are the
+    single source of truth for valid enum-like values throughout the codebase.
+
+Current status: COMPLETE for skeleton.
+"""
+
+# ── Artifact Types ────────────────────────────────────
+# The 6 V1 intelligence artifacts persisted and served by this service.
+ARTIFACT_TYPES = [
+    "rfq_intake_profile",
+    "intelligence_briefing",
+    "workbook_profile",
+    "workbook_review_report",
+    "rfq_intelligence_snapshot",
+    "rfq_analytical_record",
+]
+
+# ── Artifact Statuses ─────────────────────────────────
+# Lifecycle state for each artifact instance.
+ARTIFACT_STATUSES = ["pending", "partial", "complete", "failed"]
+
+# ── Event Types ───────────────────────────────────────
+# The 3 V1 event triggers from rfq_manager_ms.
+EVENT_TYPES = ["rfq.created", "workbook.uploaded", "outcome.recorded"]

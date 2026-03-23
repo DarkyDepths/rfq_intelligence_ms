@@ -1,0 +1,150 @@
+Traceback (most recent call last):
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such table: artifacts
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<string>", line 25, in <module>
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\testclient.py", line 518, in get
+    return super().get(
+           ^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\httpx\_client.py", line 1054, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\testclient.py", line 488, in request
+    return super().request(
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\httpx\_client.py", line 827, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\httpx\_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\httpx\_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\httpx\_client.py", line 1015, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\testclient.py", line 381, in handle_request
+    raise exc
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\testclient.py", line 378, in handle_request
+    portal.call(self.app, scope, receive, send)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\anyio\from_thread.py", line 240, in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\concurrent\futures\_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\moham\anaconda3\Lib\site-packages\anyio\from_thread.py", line 187, in _call_func
+    retval = await retval
+             ^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+    raise exc
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+    raise exc
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\fastapi\routing.py", line 214, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\starlette\concurrency.py", line 39, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\anyio\to_thread.py", line 28, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(func, *args, cancellable=cancellable,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\anyio\_backends\_asyncio.py", line 818, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\anyio\_backends\_asyncio.py", line 754, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\PFE\rfq_intelligence_ms\src\routes\intelligence_routes.py", line 44, in get_snapshot
+    return controller.get_artifact(rfq_id, "rfq_intelligence_snapshot")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\PFE\rfq_intelligence_ms\src\controllers\intelligence_controller.py", line 40, in get_artifact
+    artifact = self.datasource.get_current_artifact(rfq_id, artifact_type)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\PFE\rfq_intelligence_ms\src\datasources\artifact_datasource.py", line 49, in get_current_artifact
+    .first()
+     ^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\orm\query.py", line 2728, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\orm\query.py", line 2827, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2362, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2247, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\orm\context.py", line 305, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\moham\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: artifacts
+[SQL: SELECT artifacts.id AS artifacts_id, artifacts.rfq_id AS artifacts_rfq_id, artifacts.artifact_type AS artifacts_artifact_type, artifacts.version AS artifacts_version, artifacts.status AS artifacts_status, artifacts.is_current AS artifacts_is_current, artifacts.content AS artifacts_content, artifacts.source_event_type AS artifacts_source_event_type, artifacts.source_event_id AS artifacts_source_event_id, artifacts.schema_version AS artifacts_schema_version, artifacts.created_at AS artifacts_created_at, artifacts.updated_at AS artifacts_updated_at 
+FROM artifacts 
+WHERE artifacts.rfq_id = ? AND artifacts.artifact_type = ? AND artifacts.is_current = 1
+ LIMIT ? OFFSET ?]
+[parameters: ('00000000-0000-0000-0000-000000000001', 'rfq_intelligence_snapshot', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
