@@ -99,6 +99,8 @@ async def test_workbook_uploaded_happy_path_creates_artifacts_and_updates_snapsh
     assert "rfq_intelligence_snapshot" in current
 
     snapshot = current["rfq_intelligence_snapshot"].content
+    assert snapshot["artifact_meta"]["slice"] == "v1_incremental_intelligence"
+    assert snapshot["artifact_meta"]["slice"] != "rfq.created_vertical_slice_v1"
     assert snapshot["availability_matrix"]["workbook_profile"] == "available"
     assert snapshot["availability_matrix"]["workbook_review_report"] == "available"
 
@@ -212,3 +214,102 @@ async def test_workbook_flow_failure_rolls_back_and_no_partial_new_currents(db_s
     processed = processed_event_datasource.get_by_event_id("evt-wb-fail")
     assert processed is not None
     assert processed.status == "failed"
+
+
+def test_review_suppresses_placeholder_title_mismatch_findings(db_session):
+    datasource = ArtifactDatasource(db_session)
+    review_service = ReviewService(datasource=datasource)
+    rfq_id = uuid.uuid4()
+    event_meta = {
+        "event_id": "evt-review-placeholder",
+        "event_type": "workbook.uploaded",
+    }
+
+    intake_artifact = datasource.create_new_artifact_version(
+        rfq_id=rfq_id,
+        artifact_type="rfq_intake_profile",
+        content={
+            "canonical_project_profile": {
+                "project_title": "RFQ context pending manager enrichment",
+            }
+        },
+        status="partial",
+        source_event_type="rfq.created",
+        source_event_id="evt-intake-placeholder",
+    )
+    workbook_profile_artifact = datasource.create_new_artifact_version(
+        rfq_id=rfq_id,
+        artifact_type="workbook_profile",
+        content={
+            "workbook_structure": {},
+            "canonical_estimate_profile": {
+                "detected_identifiers": {
+                    "project_title": "Workbook context pending manager enrichment",
+                }
+            },
+        },
+        status="partial",
+        source_event_type="workbook.uploaded",
+        source_event_id="evt-workbook-placeholder",
+    )
+
+    review_artifact = review_service.build_workbook_review_report(
+        rfq_id=str(rfq_id),
+        workbook_profile_artifact=workbook_profile_artifact,
+        event_meta=event_meta,
+        intake_artifact=intake_artifact,
+        commit=False,
+    )
+
+    assert review_artifact.content["intake_vs_workbook_findings"] == []
+
+
+def test_review_emits_real_title_mismatch_when_both_values_are_meaningful(db_session):
+    datasource = ArtifactDatasource(db_session)
+    review_service = ReviewService(datasource=datasource)
+    rfq_id = uuid.uuid4()
+    event_meta = {
+        "event_id": "evt-review-real-mismatch",
+        "event_type": "workbook.uploaded",
+    }
+
+    intake_artifact = datasource.create_new_artifact_version(
+        rfq_id=rfq_id,
+        artifact_type="rfq_intake_profile",
+        content={
+            "canonical_project_profile": {
+                "project_title": "GHI Water Upgrade Lot A",
+            }
+        },
+        status="partial",
+        source_event_type="rfq.created",
+        source_event_id="evt-intake-real",
+    )
+    workbook_profile_artifact = datasource.create_new_artifact_version(
+        rfq_id=rfq_id,
+        artifact_type="workbook_profile",
+        content={
+            "workbook_structure": {},
+            "canonical_estimate_profile": {
+                "detected_identifiers": {
+                    "project_title": "GHI Water Upgrade Lot B",
+                }
+            },
+        },
+        status="partial",
+        source_event_type="workbook.uploaded",
+        source_event_id="evt-workbook-real",
+    )
+
+    review_artifact = review_service.build_workbook_review_report(
+        rfq_id=str(rfq_id),
+        workbook_profile_artifact=workbook_profile_artifact,
+        event_meta=event_meta,
+        intake_artifact=intake_artifact,
+        commit=False,
+    )
+
+    findings = review_artifact.content["intake_vs_workbook_findings"]
+    assert len(findings) == 1
+    assert findings[0]["finding_id"] == "intake_workbook_project_label_diff"
+    assert findings[0]["status"] == "active"

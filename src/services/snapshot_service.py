@@ -73,7 +73,7 @@ class SnapshotService:
         content = {
             "artifact_meta": {
                 "artifact_type": "rfq_intelligence_snapshot",
-                "slice": "rfq.created_vertical_slice_v1",
+                "slice": "v1_incremental_intelligence",
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "source_event_id": source_event_meta["event_id"],
                 "source_event_type": source_event_meta["event_type"],

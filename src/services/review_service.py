@@ -35,6 +35,18 @@ class ReviewService:
     def __init__(self, datasource: ArtifactDatasource):
         self.datasource = datasource
 
+    @staticmethod
+    def _is_placeholder_or_missing_project_title(value) -> bool:
+        if value is None:
+            return True
+
+        normalized = str(value).strip()
+        if not normalized:
+            return True
+
+        lowered = normalized.lower()
+        return "pending manager enrichment" in lowered
+
     def get_current_supporting_artifacts(self, rfq_id: str):
         """Fetch current intake and briefing artifacts for optional overlap checks."""
         rfq_uuid = UUID(str(rfq_id))
@@ -125,7 +137,11 @@ class ReviewService:
                 .get("detected_identifiers", {})
                 .get("project_title")
             )
-            if intake_title and workbook_title and intake_title != workbook_title:
+            if (
+                not self._is_placeholder_or_missing_project_title(intake_title)
+                and not self._is_placeholder_or_missing_project_title(workbook_title)
+                and intake_title != workbook_title
+            ):
                 intake_vs_workbook_findings.append(
                     {
                         "finding_id": "intake_workbook_project_label_diff",
