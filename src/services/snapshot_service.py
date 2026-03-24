@@ -40,16 +40,20 @@ class SnapshotService:
         source_event_meta: dict,
         commit: bool = True,
     ):
-        """Build and persist current rfq_intelligence_snapshot for the first slice."""
+        """Build and persist current rfq_intelligence_snapshot for available slices."""
         rfq_uuid = UUID(str(rfq_id))
         current_artifacts = self.datasource.list_current_artifacts_for_rfq(rfq_uuid)
 
         intake_artifact = current_artifacts.get("rfq_intake_profile")
         briefing_artifact = current_artifacts.get("intelligence_briefing")
+        workbook_profile_artifact = current_artifacts.get("workbook_profile")
+        workbook_review_artifact = current_artifacts.get("workbook_review_report")
         analytical_artifact = current_artifacts.get("rfq_analytical_record")
 
         intake_content = intake_artifact.content if intake_artifact else {}
         briefing_content = briefing_artifact.content if briefing_artifact else {}
+        workbook_profile_content = workbook_profile_artifact.content if workbook_profile_artifact else {}
+        workbook_review_content = workbook_review_artifact.content if workbook_review_artifact else {}
 
         intake_available = intake_artifact is not None
         briefing_available = briefing_artifact is not None
@@ -59,9 +63,11 @@ class SnapshotService:
         availability_matrix = {
             "rfq_intake_profile": "available" if intake_available else "not_ready",
             "intelligence_briefing": "available" if briefing_available else "not_ready",
-            "workbook_profile": "not_ready",
-            "workbook_review_report": "not_ready",
+            "workbook_profile": "available" if workbook_profile_artifact else "not_ready",
+            "workbook_review_report": "available" if workbook_review_artifact else "not_ready",
             "rfq_analytical_record": "available" if analytical_available else "not_ready",
+            "benchmarking": "insufficient_historical_base",
+            "similarity": "insufficient_historical_base",
         }
 
         content = {
@@ -91,12 +97,27 @@ class SnapshotService:
                 "missing_info": briefing_content.get("what_is_missing", []),
             },
             "workbook_panel": {
-                "status": "not_ready",
-                "reason": "No workbook.uploaded event processed yet.",
+                "status": workbook_profile_artifact.status if workbook_profile_artifact else "not_ready",
+                "reason": (
+                    None
+                    if workbook_profile_artifact
+                    else "No workbook.uploaded event processed yet."
+                ),
+                "template_recognition": workbook_profile_content.get("template_recognition"),
+                "pairing_validation": workbook_profile_content.get("pairing_validation"),
             },
             "review_panel": {
-                "status": "not_ready",
-                "reason": "No workbook review is available before workbook.uploaded.",
+                "status": workbook_review_artifact.status if workbook_review_artifact else "not_ready",
+                "reason": (
+                    None
+                    if workbook_review_artifact
+                    else "No workbook review is available before workbook.uploaded."
+                ),
+                "active_findings_count": (
+                    (workbook_review_content.get("summary") or {}).get("active_findings_count")
+                    if workbook_review_artifact
+                    else 0
+                ),
             },
             "analytical_status_summary": {
                 "status": analytical_artifact.status if analytical_artifact else "not_ready",

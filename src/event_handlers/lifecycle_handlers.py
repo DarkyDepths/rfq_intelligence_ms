@@ -187,7 +187,7 @@ class LifecycleHandlers:
             },
         }
 
-    async def handle_workbook_uploaded(self, rfq_id: str, event_payload: dict) -> None:
+    async def handle_workbook_uploaded(self, event: dict) -> dict:
         """
         Triggered by: workbook.uploaded event from rfq_manager_ms
 
@@ -197,9 +197,143 @@ class LifecycleHandlers:
             3. Enrich rfq_analytical_record
             4. Update rfq_intelligence_snapshot
 
-        TODO: Implement sequential build chain.
+        Sequentially builds workbook profile/review, enriches analytical record,
+        then refreshes snapshot under idempotent transactional orchestration.
         """
-        pass
+        required_envelope_fields = [
+            "event_id",
+            "event_type",
+            "event_version",
+            "emitted_at",
+            "producer",
+            "payload",
+        ]
+        missing = [field for field in required_envelope_fields if field not in event]
+        if missing:
+            raise BadRequestError(f"Missing required event fields: {', '.join(missing)}")
+
+        event_type = event["event_type"]
+        if event_type != "workbook.uploaded":
+            return {
+                "status": "ignored",
+                "reason": "unsupported_event_type",
+                "event_type": event_type,
+            }
+
+        payload = event.get("payload") or {}
+        required_payload = ["rfq_id", "workbook_ref", "workbook_filename", "uploaded_at"]
+        missing_payload = [field for field in required_payload if not payload.get(field)]
+        if missing_payload:
+            raise BadRequestError(f"Missing required payload fields: {', '.join(missing_payload)}")
+
+        rfq_id = payload["rfq_id"]
+
+        event_meta = {
+            "event_id": event["event_id"],
+            "event_type": event_type,
+            "event_version": event["event_version"],
+            "emitted_at": event["emitted_at"],
+            "producer": event["producer"],
+        }
+
+        processing_action, _ = self.event_processing_service.begin_processing(
+            event_id=event_meta["event_id"],
+            event_type=event_meta["event_type"],
+            rfq_id=rfq_id,
+        )
+
+        if processing_action == "duplicate_completed":
+            return {
+                "status": "duplicate",
+                "reason": "already_completed",
+                "event_id": event_meta["event_id"],
+                "event_type": event_type,
+                "rfq_id": rfq_id,
+            }
+
+        if processing_action == "in_progress":
+            return {
+                "status": "ignored",
+                "reason": "already_processing",
+                "event_id": event_meta["event_id"],
+                "event_type": event_type,
+                "rfq_id": rfq_id,
+            }
+
+        try:
+            workbook_context = await self.workbook_service.get_workbook_context(
+                rfq_id=rfq_id,
+                workbook_ref=payload["workbook_ref"],
+                workbook_filename=payload["workbook_filename"],
+                uploaded_at=payload["uploaded_at"],
+            )
+            workbook_profile_artifact = self.workbook_service.build_workbook_profile_from_uploaded_event(
+                workbook_context=workbook_context,
+                event_meta=event_meta,
+                commit=False,
+            )
+
+            intake_artifact, briefing_artifact = self.review_service.get_current_supporting_artifacts(rfq_id)
+            workbook_review_artifact = self.review_service.build_workbook_review_report(
+                rfq_id=rfq_id,
+                workbook_profile_artifact=workbook_profile_artifact,
+                event_meta=event_meta,
+                intake_artifact=intake_artifact,
+                briefing_artifact=briefing_artifact,
+                commit=False,
+            )
+
+            analytical_artifact = self.analytical_record_service.enrich_analytical_record_from_workbook(
+                rfq_id=rfq_id,
+                workbook_profile_artifact=workbook_profile_artifact,
+                workbook_review_artifact=workbook_review_artifact,
+                event_meta=event_meta,
+                commit=False,
+            )
+
+            snapshot_artifact = self.snapshot_service.rebuild_snapshot_for_rfq(
+                rfq_id=rfq_id,
+                source_event_meta=event_meta,
+                commit=False,
+            )
+
+            self.event_processing_service.mark_completed(event_id=event_meta["event_id"])
+        except Exception as exc:
+            self.event_processing_service.rollback_active_transaction()
+            self.event_processing_service.mark_failed(
+                event_id=event_meta["event_id"],
+                error_message=str(exc),
+            )
+            raise
+
+        return {
+            "status": "processed",
+            "event_id": event_meta["event_id"],
+            "event_type": event_type,
+            "rfq_id": rfq_id,
+            "artifacts": {
+                "workbook_profile": {
+                    "id": str(workbook_profile_artifact.id),
+                    "version": workbook_profile_artifact.version,
+                    "status": workbook_profile_artifact.status,
+                },
+                "workbook_review_report": {
+                    "id": str(workbook_review_artifact.id),
+                    "version": workbook_review_artifact.version,
+                    "status": workbook_review_artifact.status,
+                },
+                "rfq_analytical_record": {
+                    "id": str(analytical_artifact.id),
+                    "version": analytical_artifact.version,
+                    "status": analytical_artifact.status,
+                },
+                "rfq_intelligence_snapshot": {
+                    "id": str(snapshot_artifact.id),
+                    "version": snapshot_artifact.version,
+                    "status": snapshot_artifact.status,
+                },
+            },
+        }
 
     async def handle_outcome_recorded(self, rfq_id: str, event_payload: dict) -> None:
         """

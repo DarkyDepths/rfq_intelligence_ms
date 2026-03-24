@@ -28,12 +28,21 @@ TODO:
     - Define the agreed contract fields
 """
 
+import os
+from pathlib import Path
+
 
 class ManagerConnector:
     """Thin read-only client to rfq_manager_ms. Fetches only what intelligence needs."""
 
     def __init__(self, base_url: str):
         self.base_url = base_url
+
+    def _local_fixtures_root(self) -> Path:
+        configured = os.getenv("LOCAL_FIXTURES_DIR")
+        if configured:
+            return Path(configured).resolve()
+        return (Path(__file__).resolve().parents[2] / "local_fixtures").resolve()
 
     async def get_rfq_context(self, rfq_id: str) -> dict:
         """
@@ -76,3 +85,41 @@ class ManagerConnector:
         TODO: Call manager API for workbook file reference.
         """
         raise NotImplementedError("Manager connector not yet wired")
+
+    async def get_workbook_context(
+        self,
+        rfq_id: str,
+        workbook_ref: str | None = None,
+        workbook_filename: str | None = None,
+        uploaded_at: str | None = None,
+    ) -> dict:
+        """Return minimal workbook-uploaded context for deterministic processing."""
+        effective_ref = workbook_ref or "local://workbook_sample_001"
+        path = self.fetch_workbook_local_path(effective_ref)
+
+        return {
+            "rfq_id": rfq_id,
+            "workbook_ref": effective_ref,
+            "workbook_filename": workbook_filename or path.name,
+            "uploaded_at": uploaded_at,
+            "local_workbook_path": str(path),
+            "rfq_display": {
+                "rfq_code": f"RFQ-{rfq_id[:8].upper()}",
+                "project_title": "Workbook context pending manager enrichment",
+            },
+        }
+
+    def fetch_workbook_local_path(self, workbook_ref: str) -> Path:
+        """Resolve workbook reference to a local development fixture path."""
+        if workbook_ref and Path(workbook_ref).exists():
+            return Path(workbook_ref).resolve()
+
+        default_path = self._local_fixtures_root() / "workbook_uploaded" / "workbook_sample_001" / "ghi_workbook_36_sheets.xls"
+        if workbook_ref.startswith("local://") and default_path.exists():
+            return default_path
+        if default_path.exists():
+            return default_path
+
+        raise FileNotFoundError(
+            f"Could not resolve workbook reference '{workbook_ref}' to a local fixture path."
+        )
