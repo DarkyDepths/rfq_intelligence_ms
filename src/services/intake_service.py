@@ -29,6 +29,13 @@ class IntakeService:
         self.datasource = datasource
         self.connector = connector
 
+    def reprocess(self, rfq_id: str) -> dict:
+        """Accept manual intake reprocess request (stub)."""
+        return {
+            "status": "accepted",
+            "message": "Reprocess request received (stub only — not yet implemented)",
+        }
+
     async def process_intake(self, rfq_id: str, event_payload: dict) -> None:
         """
         Run the full intake parsing pipeline for an RFQ.

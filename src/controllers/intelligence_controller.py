@@ -5,10 +5,10 @@ BACAB Layer: Controller (application orchestration — HTTP)
 
 Responsibility:
     Orchestrates HTTP read requests for intelligence artifacts.
-    Receives requests from routes, calls the datasource to fetch data,
-    uses the translator to format responses. Does NOT contain domain logic.
+    Receives requests from routes and delegates to the read service.
+    Does NOT contain persistence logic.
 
-    Flow: route → controller → datasource → translator → response
+    Flow: route → controller → service → datasource/connectors
 
 Current status: STUB — wired to datasource but returns 404 for missing artifacts.
 
@@ -19,17 +19,14 @@ TODO:
 
 from uuid import UUID
 
-from src.datasources.artifact_datasource import ArtifactDatasource
-from src.translators.artifact_translator import ArtifactTranslator
-from src.utils.exceptions import NotFoundError
+from src.services.artifact_read_service import ArtifactReadService
 
 
 class IntelligenceController:
     """Orchestrates HTTP read requests for artifacts."""
 
-    def __init__(self, datasource: ArtifactDatasource, translator: ArtifactTranslator):
-        self.datasource = datasource
-        self.translator = translator
+    def __init__(self, artifact_read_service: ArtifactReadService):
+        self.artifact_read_service = artifact_read_service
 
     def get_artifact(self, rfq_id: UUID, artifact_type: str) -> dict:
         """
@@ -37,10 +34,7 @@ class IntelligenceController:
 
         Returns the full artifact response or raises NotFoundError.
         """
-        artifact = self.datasource.get_current_artifact(rfq_id, artifact_type)
-        if not artifact:
-            raise NotFoundError(f"No {artifact_type} artifact found for this RFQ")
-        return self.translator.to_response(artifact)
+        return self.artifact_read_service.get_artifact(rfq_id, artifact_type)
 
     def list_artifacts(self, rfq_id: UUID) -> dict:
         """
@@ -48,7 +42,4 @@ class IntelligenceController:
 
         Returns a collection response — empty list if no artifacts exist (not 404).
         """
-        artifacts = self.datasource.list_artifacts(rfq_id)
-        return {
-            "artifacts": [self.translator.to_summary(a) for a in artifacts]
-        }
+        return self.artifact_read_service.list_artifacts(rfq_id)

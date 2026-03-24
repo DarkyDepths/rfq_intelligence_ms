@@ -31,6 +31,13 @@ class WorkbookService:
         self.datasource = datasource
         self.connector = connector
 
+    def reprocess(self, rfq_id: str) -> dict:
+        """Accept manual workbook reprocess request (stub)."""
+        return {
+            "status": "accepted",
+            "message": "Reprocess request received (stub only — not yet implemented)",
+        }
+
     async def process_workbook(self, rfq_id: str, event_payload: dict) -> None:
         """
         Run the full workbook parsing pipeline for an RFQ.

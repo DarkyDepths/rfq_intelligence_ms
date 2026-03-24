@@ -12,8 +12,9 @@ Responsibility:
         - artifact_datasource (needs db session)
         - manager_connector (needs manager base URL from config)
         - artifact_translator (stateless)
-        - intelligence_controller (needs datasource + translator)
-        - reprocess_controller (stateless stub)
+        - services (need datasource/connectors)
+        - intelligence_controller (needs read service)
+        - reprocess_controller (needs reprocess services)
 
     No layer skips a level:
         route → controller → service → datasource
@@ -39,6 +40,11 @@ from src.translators.artifact_translator import ArtifactTranslator
 # ── Controllers ───────────────────────────────────────
 from src.controllers.intelligence_controller import IntelligenceController
 from src.controllers.reprocess_controller import ReprocessController
+
+# ── Services ──────────────────────────────────────────
+from src.services.artifact_read_service import ArtifactReadService
+from src.services.intake_service import IntakeService
+from src.services.workbook_service import WorkbookService
 
 
 # ═══════════════════════════════════════════════════════
@@ -66,15 +72,45 @@ def get_artifact_translator() -> ArtifactTranslator:
 
 
 # ═══════════════════════════════════════════════════════
+# SERVICE PROVIDERS
+# ═══════════════════════════════════════════════════════
+
+def get_artifact_read_service(
+    datasource: ArtifactDatasource = Depends(get_artifact_datasource),
+    translator: ArtifactTranslator = Depends(get_artifact_translator),
+) -> ArtifactReadService:
+    return ArtifactReadService(datasource=datasource, translator=translator)
+
+
+def get_intake_service(
+    datasource: ArtifactDatasource = Depends(get_artifact_datasource),
+    connector: ManagerConnector = Depends(get_manager_connector),
+) -> IntakeService:
+    return IntakeService(datasource=datasource, connector=connector)
+
+
+def get_workbook_service(
+    datasource: ArtifactDatasource = Depends(get_artifact_datasource),
+    connector: ManagerConnector = Depends(get_manager_connector),
+) -> WorkbookService:
+    return WorkbookService(datasource=datasource, connector=connector)
+
+
+# ═══════════════════════════════════════════════════════
 # CONTROLLER PROVIDERS
 # ═══════════════════════════════════════════════════════
 
 def get_intelligence_controller(
-    datasource: ArtifactDatasource = Depends(get_artifact_datasource),
-    translator: ArtifactTranslator = Depends(get_artifact_translator),
+    artifact_read_service: ArtifactReadService = Depends(get_artifact_read_service),
 ) -> IntelligenceController:
-    return IntelligenceController(datasource=datasource, translator=translator)
+    return IntelligenceController(artifact_read_service=artifact_read_service)
 
 
-def get_reprocess_controller() -> ReprocessController:
-    return ReprocessController()
+def get_reprocess_controller(
+    intake_service: IntakeService = Depends(get_intake_service),
+    workbook_service: WorkbookService = Depends(get_workbook_service),
+) -> ReprocessController:
+    return ReprocessController(
+        intake_service=intake_service,
+        workbook_service=workbook_service,
+    )

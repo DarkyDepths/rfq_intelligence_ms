@@ -17,8 +17,8 @@ Current status: COMPLETE for skeleton.
 Constraints:
     - UniqueConstraint on (rfq_id, artifact_type, version) prevents duplicates
     - Composite index on (rfq_id, artifact_type, is_current) enables fast lookup
-    - is_current invariant: at most one True per (rfq_id, artifact_type),
-      enforced by datasource layer logic (flip old → insert new in one transaction)
+    - Partial unique index on (rfq_id, artifact_type) where is_current is true,
+      enforcing at most one current row per artifact type and RFQ
 """
 
 import uuid as _uuid
@@ -34,6 +34,7 @@ from sqlalchemy import (
     TypeDecorator,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 
@@ -103,6 +104,14 @@ class Artifact(Base):
     __table_args__ = (
         UniqueConstraint("rfq_id", "artifact_type", "version", name="uq_artifact_version"),
         Index("ix_artifact_current_lookup", "rfq_id", "artifact_type", "is_current"),
+        Index(
+            "uq_artifact_current_per_type",
+            "rfq_id",
+            "artifact_type",
+            unique=True,
+            postgresql_where=text("is_current = true"),
+            sqlite_where=text("is_current = 1"),
+        ),
     )
 
     def __repr__(self):

@@ -19,9 +19,16 @@ TODO:
     - Add reprocessing status tracking
 """
 
+from src.services.intake_service import IntakeService
+from src.services.workbook_service import WorkbookService
+
 
 class ReprocessController:
     """Handles manual reprocessing triggers (HTTP)."""
+
+    def __init__(self, intake_service: IntakeService, workbook_service: WorkbookService):
+        self.intake_service = intake_service
+        self.workbook_service = workbook_service
 
     def reprocess_intake(self, rfq_id: str) -> dict:
         """
@@ -29,11 +36,7 @@ class ReprocessController:
 
         Returns 202 Accepted — processing happens asynchronously.
         """
-        # TODO: Call intake_service.reprocess(rfq_id)
-        return {
-            "status": "accepted",
-            "message": "Reprocess request received (stub only — not yet implemented)",
-        }
+        return self.intake_service.reprocess(rfq_id)
 
     def reprocess_workbook(self, rfq_id: str) -> dict:
         """
@@ -41,8 +44,4 @@ class ReprocessController:
 
         Returns 202 Accepted — processing happens asynchronously.
         """
-        # TODO: Call workbook_service.reprocess(rfq_id)
-        return {
-            "status": "accepted",
-            "message": "Reprocess request received (stub only — not yet implemented)",
-        }
+        return self.workbook_service.reprocess(rfq_id)

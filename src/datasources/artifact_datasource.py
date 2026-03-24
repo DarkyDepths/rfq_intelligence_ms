@@ -5,9 +5,9 @@ BACAB Layer: Datasource (infrastructure — DB queries)
 
 Responsibility:
     Handles all database CRUD operations for the artifacts table.
-    Encapsulates SQLAlchemy queries and enforces the is_current invariant:
-    at most one is_current=True row per (rfq_id, artifact_type), managed
-    by flipping old → inserting new in a single transaction.
+    Encapsulates SQLAlchemy queries and relies on DB constraints/indexes for
+    invariant enforcement. Transactional flip old → insert new logic remains
+    the application-side companion to DB-level safeguards.
 
 Current status: STUB — query methods implemented for skeleton reads,
     create_artifact stubbed for future use.
@@ -76,7 +76,8 @@ class ArtifactDatasource:
         Create a new artifact version, flipping the old version's is_current to False.
 
         This must happen in the same transaction to maintain the invariant:
-        at most one is_current=True per (rfq_id, artifact_type).
+        at most one is_current=True per (rfq_id, artifact_type), with DB-level
+        partial unique index protection in PostgreSQL.
 
         TODO: Implement full version management when services are wired.
         """

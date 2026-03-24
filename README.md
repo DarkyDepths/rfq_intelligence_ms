@@ -100,4 +100,6 @@ HTTP path:    routes → controllers → services → datasources/connectors
 Event path:   event_handlers → services → datasources/connectors
 ```
 
+Controllers and event handlers do not access datasources directly; services are the required boundary.
+
 Own PostgreSQL database (separate from manager). JSONB artifact storage with versioning.
