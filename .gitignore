@@ -42,3 +42,6 @@ migrations/__pycache__/
 
 # ── Context docs (not shipped) ────────────────────
 Context/
+
+# ── Local fixtures ────────────────────────────────
+local_fixtures/
