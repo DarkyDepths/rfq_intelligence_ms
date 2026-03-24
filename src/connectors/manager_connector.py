@@ -35,6 +35,27 @@ class ManagerConnector:
     def __init__(self, base_url: str):
         self.base_url = base_url
 
+    async def get_rfq_context(self, rfq_id: str) -> dict:
+        """
+        Fetch minimal, stable RFQ/source-package context for intelligence slices.
+
+        Current implementation is a deterministic stub contract that can be
+        replaced with real manager API calls later without changing callers.
+        """
+        return {
+            "rfq_id": rfq_id,
+            "rfq_code": f"RFQ-{rfq_id[:8].upper()}",
+            "client_name": "Unknown client",
+            "project_title": "RFQ context pending manager enrichment",
+            "source_package_refs": [
+                {
+                    "reference": f"rfq-files/{rfq_id}/source-package.zip",
+                    "display_name": "source-package.zip",
+                }
+            ],
+            "created_at": None,
+        }
+
     async def get_rfq_metadata(self, rfq_id: str) -> dict:
         """
         Fetch RFQ metadata and file references from manager.

@@ -30,7 +30,8 @@ from src.services.briefing_service import BriefingService
 from src.services.workbook_service import WorkbookService
 from src.services.review_service import ReviewService
 from src.services.snapshot_service import SnapshotService
-from src.services.enrichment_service import EnrichmentService
+from src.services.analytical_record_service import AnalyticalRecordService
+from src.utils.exceptions import BadRequestError
 
 
 class LifecycleHandlers:
@@ -43,16 +44,16 @@ class LifecycleHandlers:
         workbook_service: WorkbookService,
         review_service: ReviewService,
         snapshot_service: SnapshotService,
-        enrichment_service: EnrichmentService,
+        analytical_record_service: AnalyticalRecordService,
     ):
         self.intake_service = intake_service
         self.briefing_service = briefing_service
         self.workbook_service = workbook_service
         self.review_service = review_service
         self.snapshot_service = snapshot_service
-        self.enrichment_service = enrichment_service
+        self.analytical_record_service = analytical_record_service
 
-    async def handle_rfq_created(self, rfq_id: str, event_payload: dict) -> None:
+    async def handle_rfq_created(self, event: dict) -> dict:
         """
         Triggered by: rfq.created event from rfq_manager_ms
 
@@ -62,9 +63,88 @@ class LifecycleHandlers:
             3. Create rfq_analytical_record stub
             4. Update rfq_intelligence_snapshot
 
-        TODO: Implement sequential build chain.
+        Sequentially builds intake, briefing, analytical stub, then snapshot.
         """
-        pass
+        required_envelope_fields = [
+            "event_id",
+            "event_type",
+            "event_version",
+            "emitted_at",
+            "producer",
+            "payload",
+        ]
+        missing = [field for field in required_envelope_fields if field not in event]
+        if missing:
+            raise BadRequestError(f"Missing required event fields: {', '.join(missing)}")
+
+        event_type = event["event_type"]
+        if event_type != "rfq.created":
+            return {
+                "status": "ignored",
+                "reason": "unsupported_event_type",
+                "event_type": event_type,
+            }
+
+        payload = event.get("payload") or {}
+        rfq_id = payload.get("rfq_id")
+        if not rfq_id:
+            raise BadRequestError("Missing required payload field: rfq_id")
+
+        event_meta = {
+            "event_id": event["event_id"],
+            "event_type": event_type,
+            "event_version": event["event_version"],
+            "emitted_at": event["emitted_at"],
+            "producer": event["producer"],
+        }
+
+        rfq_context = await self.intake_service.get_rfq_context(rfq_id)
+        intake_artifact = self.intake_service.build_intake_profile_from_rfq_created(
+            rfq_context=rfq_context,
+            event_meta=event_meta,
+        )
+        briefing_artifact = self.briefing_service.build_briefing_from_intake(
+            intake_artifact=intake_artifact,
+            event_meta=event_meta,
+        )
+        analytical_artifact = self.analytical_record_service.build_initial_analytical_record(
+            rfq_context=rfq_context,
+            intake_artifact=intake_artifact,
+            event_meta=event_meta,
+        )
+        snapshot_artifact = self.snapshot_service.rebuild_snapshot_for_rfq(
+            rfq_id=rfq_id,
+            source_event_meta=event_meta,
+        )
+
+        return {
+            "status": "processed",
+            "event_id": event_meta["event_id"],
+            "event_type": event_type,
+            "rfq_id": rfq_id,
+            "artifacts": {
+                "rfq_intake_profile": {
+                    "id": str(intake_artifact.id),
+                    "version": intake_artifact.version,
+                    "status": intake_artifact.status,
+                },
+                "intelligence_briefing": {
+                    "id": str(briefing_artifact.id),
+                    "version": briefing_artifact.version,
+                    "status": briefing_artifact.status,
+                },
+                "rfq_analytical_record": {
+                    "id": str(analytical_artifact.id),
+                    "version": analytical_artifact.version,
+                    "status": analytical_artifact.status,
+                },
+                "rfq_intelligence_snapshot": {
+                    "id": str(snapshot_artifact.id),
+                    "version": snapshot_artifact.version,
+                    "status": snapshot_artifact.status,
+                },
+            },
+        }
 
     async def handle_workbook_uploaded(self, rfq_id: str, event_payload: dict) -> None:
         """

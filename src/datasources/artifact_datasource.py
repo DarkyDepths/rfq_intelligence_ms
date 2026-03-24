@@ -63,6 +63,18 @@ class ArtifactDatasource:
             .all()
         )
 
+    def list_current_artifacts_for_rfq(self, rfq_id: UUID) -> dict[str, Artifact]:
+        """Return all current artifacts for an RFQ keyed by artifact_type."""
+        artifacts = (
+            self.db.query(Artifact)
+            .filter(
+                Artifact.rfq_id == rfq_id,
+                Artifact.is_current == True,  # noqa: E712
+            )
+            .all()
+        )
+        return {artifact.artifact_type: artifact for artifact in artifacts}
+
     def create_artifact(
         self,
         rfq_id: UUID,
@@ -104,3 +116,22 @@ class ArtifactDatasource:
         self.db.flush()
 
         return artifact
+
+    def create_new_artifact_version(
+        self,
+        rfq_id: UUID,
+        artifact_type: str,
+        content: Optional[dict] = None,
+        status: str = "pending",
+        source_event_type: Optional[str] = None,
+        source_event_id: Optional[str] = None,
+    ) -> Artifact:
+        """Compatibility helper for explicit versioned artifact creation intent."""
+        return self.create_artifact(
+            rfq_id=rfq_id,
+            artifact_type=artifact_type,
+            content=content,
+            status=status,
+            source_event_type=source_event_type,
+            source_event_id=source_event_id,
+        )
