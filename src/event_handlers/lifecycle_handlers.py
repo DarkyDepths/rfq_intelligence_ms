@@ -335,7 +335,7 @@ class LifecycleHandlers:
             },
         }
 
-    async def handle_outcome_recorded(self, rfq_id: str, event_payload: dict) -> None:
+    async def handle_outcome_recorded(self, event: dict) -> dict:
         """
         Triggered by: outcome.recorded event from rfq_manager_ms
 
@@ -344,6 +344,110 @@ class LifecycleHandlers:
             2. Enrich rfq_analytical_record
             3. Refresh snapshot if needed
 
-        TODO: Implement sequential build chain.
+        Reads outcome payload, enriches analytical record, and refreshes snapshot
+        under idempotent transactional orchestration.
         """
-        pass
+        required_envelope_fields = [
+            "event_id",
+            "event_type",
+            "event_version",
+            "emitted_at",
+            "producer",
+            "payload",
+        ]
+        missing = [field for field in required_envelope_fields if field not in event]
+        if missing:
+            raise BadRequestError(f"Missing required event fields: {', '.join(missing)}")
+
+        event_type = event["event_type"]
+        if event_type != "outcome.recorded":
+            return {
+                "status": "ignored",
+                "reason": "unsupported_event_type",
+                "event_type": event_type,
+            }
+
+        payload = event.get("payload") or {}
+        required_payload = ["rfq_id", "outcome", "recorded_at"]
+        missing_payload = [field for field in required_payload if not payload.get(field)]
+        if missing_payload:
+            raise BadRequestError(f"Missing required payload fields: {', '.join(missing_payload)}")
+
+        if payload["outcome"] not in {"awarded", "lost", "cancelled"}:
+            raise BadRequestError("Invalid outcome value; supported values are awarded, lost, cancelled")
+
+        rfq_id = payload["rfq_id"]
+
+        event_meta = {
+            "event_id": event["event_id"],
+            "event_type": event_type,
+            "event_version": event["event_version"],
+            "emitted_at": event["emitted_at"],
+            "producer": event["producer"],
+        }
+
+        processing_action, _ = self.event_processing_service.begin_processing(
+            event_id=event_meta["event_id"],
+            event_type=event_meta["event_type"],
+            rfq_id=rfq_id,
+        )
+
+        if processing_action == "duplicate_completed":
+            return {
+                "status": "duplicate",
+                "reason": "already_completed",
+                "event_id": event_meta["event_id"],
+                "event_type": event_type,
+                "rfq_id": rfq_id,
+            }
+
+        if processing_action == "in_progress":
+            return {
+                "status": "ignored",
+                "reason": "already_processing",
+                "event_id": event_meta["event_id"],
+                "event_type": event_type,
+                "rfq_id": rfq_id,
+            }
+
+        try:
+            analytical_artifact = self.analytical_record_service.enrich_analytical_record_from_outcome(
+                rfq_id=rfq_id,
+                outcome_payload=payload,
+                event_meta=event_meta,
+                commit=False,
+            )
+
+            snapshot_artifact = self.snapshot_service.rebuild_snapshot_for_rfq(
+                rfq_id=rfq_id,
+                source_event_meta=event_meta,
+                commit=False,
+            )
+
+            self.event_processing_service.mark_completed(event_id=event_meta["event_id"])
+        except Exception as exc:
+            self.event_processing_service.rollback_active_transaction()
+            self.event_processing_service.mark_failed(
+                event_id=event_meta["event_id"],
+                error_message=str(exc),
+            )
+            raise
+
+        return {
+            "status": "processed",
+            "event_id": event_meta["event_id"],
+            "event_type": event_type,
+            "rfq_id": rfq_id,
+            "artifacts": {
+                "rfq_analytical_record": {
+                    "id": str(analytical_artifact.id),
+                    "version": analytical_artifact.version,
+                    "status": analytical_artifact.status,
+                },
+                "rfq_intelligence_snapshot": {
+                    "id": str(snapshot_artifact.id),
+                    "version": snapshot_artifact.version,
+                    "status": snapshot_artifact.status,
+                },
+            },
+        }

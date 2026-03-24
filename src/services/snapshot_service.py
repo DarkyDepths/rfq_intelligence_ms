@@ -54,6 +54,8 @@ class SnapshotService:
         briefing_content = briefing_artifact.content if briefing_artifact else {}
         workbook_profile_content = workbook_profile_artifact.content if workbook_profile_artifact else {}
         workbook_review_content = workbook_review_artifact.content if workbook_review_artifact else {}
+        analytical_content = analytical_artifact.content if analytical_artifact else {}
+        outcome_enrichment = analytical_content.get("outcome_enrichment") or {}
 
         intake_available = intake_artifact is not None
         briefing_available = briefing_artifact is not None
@@ -126,6 +128,13 @@ class SnapshotService:
                     "Initial analytical seed exists only for cold-start memory.",
                     "Historical similarity/benchmark capabilities are not ready.",
                 ],
+            },
+            "outcome_summary": {
+                "status": "recorded" if outcome_enrichment else "not_recorded",
+                "outcome": outcome_enrichment.get("outcome_status"),
+                "reason": outcome_enrichment.get("outcome_reason"),
+                "recorded_at": outcome_enrichment.get("recorded_at"),
+                "learning_loop_status": outcome_enrichment.get("learning_loop_status"),
             },
             "consumer_hints": {
                 "ui_recommended_tabs": ["snapshot", "briefing"],
