@@ -1,0 +1,848 @@
+openapi: 3.1.0
+info:
+  title: rfq_intelligence_ms — RFQ Intelligence API
+  description: |
+    Interface contract for the shared intelligence engine of the RFQMGMT platform.
+    A read-heavy analytical microservice that produces persistent intelligence artifacts
+    from RFQ source material, estimation workbooks, and historical records.
+    V1 cold-start scope: 7 endpoints, 6 artifact types, 1 JSONB artifact table.
+    Event triggers (rfq.created, workbook.uploaded, outcome.recorded) are documented
+    in the event contract — they are NOT modeled as REST endpoints.
+  version: "1.0.0"
+  contact:
+    name: RFQ Intelligence Team
+
+servers:
+  - url: /intelligence/v1
+    description: Base path — convention /{ms_name}/{version}
+  - url: http://localhost:8001/intelligence/v1
+    description: Local development
+
+tags:
+  - name: Health
+    description: Liveness check (served at root, outside base path)
+  - name: Artifact Reads
+    description: Read current intelligence artifacts for an RFQ (5 endpoints)
+  - name: Reprocess
+    description: Manual re-run of intelligence build chains (2 endpoints)
+
+
+# ═══════════════════════════════════════════════════
+# PATHS
+# ═══════════════════════════════════════════════════
+paths:
+
+  # ──── HEALTH (outside base path) ─────────────────
+  /health:
+    servers:
+      - url: http://localhost:8001
+        description: Health is served at root, not under /intelligence/v1
+    get:
+      tags: [Health]
+      summary: "#0 — Health check"
+      description: Liveness probe for the intelligence service.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+                service: rfq_intelligence_ms
+
+  # ──── SNAPSHOT ───────────────────────────────────
+  /rfqs/{rfq_id}/snapshot:
+    get:
+      tags: [Artifact Reads]
+      summary: "#1 — Get intelligence snapshot"
+      description: |
+        Returns the current rfq_intelligence_snapshot — the consumer-facing read model.
+        This is the primary entry point for UI and chatbot.
+        Contains availability matrix, executive panel, briefing panel, workbook panel,
+        review panel, and consumer hints.
+      operationId: getSnapshot
+      parameters:
+        - $ref: '#/components/parameters/RfqIdParam'
+      responses:
+        '200':
+          description: Current snapshot artifact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotResponse'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  # ──── BRIEFING ──────────────────────────────────
+  /rfqs/{rfq_id}/briefing:
+    get:
+      tags: [Artifact Reads]
+      summary: "#2 — Get intelligence briefing"
+      description: |
+        Returns the latest intelligence_briefing — the flagship proactive dossier
+        generated on rfq.created. Contains document understanding, compliance flags,
+        and section availability. Similarity and cost envelope sections are present
+        but marked unavailable in cold start.
+      operationId: getBriefing
+      parameters:
+        - $ref: '#/components/parameters/RfqIdParam'
+      responses:
+        '200':
+          description: Current briefing artifact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BriefingResponse'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  # ──── WORKBOOK PROFILE ──────────────────────────
+  /rfqs/{rfq_id}/workbook-profile:
+    get:
+      tags: [Artifact Reads]
+      summary: "#3 — Get workbook profile"
+      description: |
+        Returns the latest workbook_profile — structured extraction from the GHI
+        estimation workbook. Contains canonical estimate profile (shared mirror),
+        cost breakdown, financial profile, schedule profile, and structural quality/gaps.
+        Available after workbook.uploaded event.
+      operationId: getWorkbookProfile
+      parameters:
+        - $ref: '#/components/parameters/RfqIdParam'
+      responses:
+        '200':
+          description: Current workbook profile artifact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkbookProfileResponse'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  # ──── WORKBOOK REVIEW ───────────────────────────
+  /rfqs/{rfq_id}/workbook-review:
+    get:
+      tags: [Artifact Reads]
+      summary: "#4 — Get workbook review report"
+      description: |
+        Returns the latest workbook_review_report — the bridge artifact comparing
+        intake intelligence vs workbook intelligence. Contains three finding families
+        with explicit activation status. Every finding uses a universal object shape
+        with review_posture: "this_deserves_review".
+      operationId: getWorkbookReview
+      parameters:
+        - $ref: '#/components/parameters/RfqIdParam'
+      responses:
+        '200':
+          description: Current workbook review report artifact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkbookReviewResponse'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  # ──── ARTIFACT INDEX ────────────────────────────
+  /rfqs/{rfq_id}/artifacts:
+    get:
+      tags: [Artifact Reads]
+      summary: "#5 — List all artifacts for an RFQ"
+      description: |
+        Returns an index of all artifacts (all types, all versions) for the given RFQ.
+        Collection endpoint — always returns 200, with an empty list if no artifacts exist.
+        Used for admin/debug purposes.
+      operationId: listArtifacts
+      parameters:
+        - $ref: '#/components/parameters/RfqIdParam'
+      responses:
+        '200':
+          description: Artifact index (may be empty)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtifactIndexResponse'
+              example:
+                artifacts:
+                  - artifact_type: rfq_intake_profile
+                    version: 1
+                    status: complete
+                    is_current: true
+                    created_at: "2026-03-23T10:00:00Z"
+                  - artifact_type: intelligence_briefing
+                    version: 2
+                    status: complete
+                    is_current: true
+                    created_at: "2026-03-23T10:05:00Z"
+
+  # ──── REPROCESS INTAKE ──────────────────────────
+  /rfqs/{rfq_id}/reprocess/intake:
+    post:
+      tags: [Reprocess]
+      summary: "#6 — Reprocess intake"
+      description: |
+        Manual re-run of intake parsing. Triggers the full rfq.created build chain:
+        intake_profile → briefing → analytical_record stub → snapshot rebuild.
+      operationId: reprocessIntake
+      parameters:
+        - $ref: '#/components/parameters/RfqIdParam'
+      responses:
+        '202':
+          description: Reprocess request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReprocessAcceptedResponse'
+              example:
+                status: accepted
+                message: Intake reprocessing triggered
+
+  # ──── REPROCESS WORKBOOK ────────────────────────
+  /rfqs/{rfq_id}/reprocess/workbook:
+    post:
+      tags: [Reprocess]
+      summary: "#7 — Reprocess workbook"
+      description: |
+        Manual re-run of workbook parsing. Triggers the full workbook.uploaded build chain:
+        workbook_profile → review_report → analytical_record enrichment → snapshot rebuild.
+      operationId: reprocessWorkbook
+      parameters:
+        - $ref: '#/components/parameters/RfqIdParam'
+      responses:
+        '202':
+          description: Reprocess request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReprocessAcceptedResponse'
+              example:
+                status: accepted
+                message: Workbook reprocessing triggered
+
+
+# ═══════════════════════════════════════════════════
+# COMPONENTS
+# ═══════════════════════════════════════════════════
+components:
+
+  # ──── PARAMETERS ─────────────────────────────────
+  parameters:
+    RfqIdParam:
+      name: rfq_id
+      in: path
+      required: true
+      description: UUID of the RFQ in rfq_manager_ms
+      schema:
+        type: string
+        format: uuid
+
+  # ──── RESPONSES ──────────────────────────────────
+  responses:
+    ArtifactNotFound:
+      description: No current artifact of this type exists for the given RFQ
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "No artifact found for this RFQ"
+
+  # ──── SCHEMAS ────────────────────────────────────
+  schemas:
+
+    # ── Shared / Reusable ──
+
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          example: "No artifact found for this RFQ"
+
+    HealthResponse:
+      type: object
+      required: [status, service]
+      properties:
+        status:
+          type: string
+          example: healthy
+        service:
+          type: string
+          example: rfq_intelligence_ms
+
+    ArtifactStatus:
+      type: string
+      enum: [pending, partial, complete, failed]
+      description: Lifecycle state for each artifact instance
+
+    ArtifactMeta:
+      type: object
+      description: Shared metadata envelope present on every artifact response
+      required: [artifact_type, rfq_id, version, status, created_at]
+      properties:
+        artifact_type:
+          type: string
+          enum:
+            - rfq_intake_profile
+            - intelligence_briefing
+            - workbook_profile
+            - workbook_review_report
+            - rfq_intelligence_snapshot
+            - rfq_analytical_record
+        rfq_id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          example: 1
+        status:
+          $ref: '#/components/schemas/ArtifactStatus'
+        is_current:
+          type: boolean
+          default: true
+        schema_version:
+          type: string
+          default: v1
+        source_event_type:
+          type: string
+          nullable: true
+          example: rfq.created
+        source_event_id:
+          type: string
+          nullable: true
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ReprocessAcceptedResponse:
+      type: object
+      required: [status, message]
+      properties:
+        status:
+          type: string
+          enum: [accepted]
+        message:
+          type: string
+          example: "Intake reprocessing triggered"
+
+    # ── Snapshot ──
+
+    AvailabilityStatus:
+      type: string
+      enum: [available, partial, unavailable, unavailable_cold_start, stale]
+      description: Per-section intelligence availability
+
+    SnapshotContent:
+      type: object
+      description: |
+        Assembled read model for one RFQ. Panels are compressed views of
+        underlying artifacts — not the full artifact payloads.
+      properties:
+        snapshot_meta:
+          type: object
+          properties:
+            overall_status:
+              type: string
+              enum: [intake_processing, briefing_ready, workbook_processing, review_ready, partial, failed]
+            cold_start_mode:
+              type: boolean
+        availability_matrix:
+          type: object
+          description: Per-section availability status
+          properties:
+            document_understanding:
+              $ref: '#/components/schemas/AvailabilityStatus'
+            similarity_context:
+              $ref: '#/components/schemas/AvailabilityStatus'
+            cost_envelope:
+              $ref: '#/components/schemas/AvailabilityStatus'
+            workbook_profile:
+              $ref: '#/components/schemas/AvailabilityStatus'
+            benchmark_outliers:
+              $ref: '#/components/schemas/AvailabilityStatus'
+            briefing_vs_actual:
+              $ref: '#/components/schemas/AvailabilityStatus'
+        executive_panel:
+          type: object
+          description: RFQ overview summary for UI and chatbot
+          properties:
+            headline_summary:
+              type: string
+            current_key_flags:
+              type: array
+              items:
+                type: string
+            overall_confidence_band:
+              type: string
+              enum: [high, medium, low]
+        briefing_panel:
+          type: object
+          description: Compressed briefing view
+          properties:
+            document_understanding_summary:
+              type: string
+            compliance_risk_summary:
+              type: array
+              items:
+                type: string
+            supplier_constraint_summary:
+              type: array
+              items:
+                type: string
+            similarity_status:
+              $ref: '#/components/schemas/AvailabilityStatus'
+            cost_envelope_status:
+              $ref: '#/components/schemas/AvailabilityStatus'
+        workbook_panel:
+          type: object
+          description: Workbook-side state summary
+          properties:
+            workbook_uploaded:
+              type: boolean
+            workbook_parse_status:
+              $ref: '#/components/schemas/ArtifactStatus'
+            cost_summary_headlines:
+              type: object
+              properties:
+                total_estimated_cost_sar:
+                  type: number
+                cost_per_ton_sar:
+                  type: number
+            key_process_flags:
+              type: object
+              properties:
+                pwht_required:
+                  type: string
+                u_stamp_required:
+                  type: string
+        review_panel:
+          type: object
+          description: Review outcome in compressed form
+          properties:
+            review_status:
+              type: string
+            finding_counts_by_family:
+              type: object
+              properties:
+                structural_completeness:
+                  type: integer
+                benchmark_outlier:
+                  type: integer
+                briefing_vs_actual:
+                  type: integer
+            benchmark_status:
+              $ref: '#/components/schemas/AvailabilityStatus'
+            recommended_checks:
+              type: array
+              items:
+                type: string
+        consumer_hints:
+          type: object
+          description: Pre-computed navigation hints for UI and chatbot
+          properties:
+            ui_recommended_tabs:
+              type: array
+              items:
+                type: string
+            chatbot_suggested_questions:
+              type: array
+              items:
+                type: string
+            manager_attention_points:
+              type: array
+              items:
+                type: string
+            estimator_attention_points:
+              type: array
+              items:
+                type: string
+
+    SnapshotResponse:
+      allOf:
+        - $ref: '#/components/schemas/ArtifactMeta'
+        - type: object
+          properties:
+            artifact_type:
+              type: string
+              const: rfq_intelligence_snapshot
+            content:
+              $ref: '#/components/schemas/SnapshotContent'
+
+    # ── Briefing ──
+
+    BriefingSectionStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [available, unavailable]
+        reason:
+          type: string
+          nullable: true
+          example: insufficient_historical_base
+
+    BriefingContent:
+      type: object
+      description: |
+        Proactive intelligence dossier. Active sections provide both structured
+        fields and summary_text. Unavailable sections carry status + reason.
+      properties:
+        briefing_scope:
+          type: object
+          properties:
+            cold_start_mode:
+              type: boolean
+            historical_base_available:
+              type: boolean
+            sections_active:
+              type: array
+              items:
+                type: string
+            sections_unavailable:
+              type: array
+              items:
+                type: string
+        executive_summary:
+          type: object
+          properties:
+            summary_text:
+              type: string
+            overall_confidence_band:
+              type: string
+              enum: [high, medium, low]
+            review_posture:
+              type: string
+        section_a_document_understanding:
+          type: object
+          description: Strongest section — always active in V1. Canonical profile summary, doc families, technical requirements, QA/QC.
+          additionalProperties: true
+        section_b_similarity_context:
+          $ref: '#/components/schemas/BriefingSectionStatus'
+        section_c_preliminary_cost_envelope:
+          $ref: '#/components/schemas/BriefingSectionStatus'
+        section_d_client_compliance_supplier_signals:
+          type: object
+          description: Merged section in V1 — compliance flags active, client history unavailable.
+          properties:
+            compliance_risk_flags:
+              type: array
+              items:
+                type: string
+            supplier_constraint_flags:
+              type: array
+              items:
+                type: string
+            client_context_status:
+              $ref: '#/components/schemas/BriefingSectionStatus'
+        quality_and_gaps:
+          type: object
+          properties:
+            missing_critical_inputs:
+              type: array
+              items:
+                type: string
+            ambiguous_extractions:
+              type: array
+              items:
+                type: string
+            low_confidence_sections:
+              type: array
+              items:
+                type: string
+            recommended_human_checks:
+              type: array
+              items:
+                type: string
+
+    BriefingResponse:
+      allOf:
+        - $ref: '#/components/schemas/ArtifactMeta'
+        - type: object
+          properties:
+            artifact_type:
+              type: string
+              const: intelligence_briefing
+            content:
+              $ref: '#/components/schemas/BriefingContent'
+
+    # ── Workbook Profile ──
+
+    CostLine:
+      type: object
+      properties:
+        line_code:
+          type: string
+          enum: [material, labour, design, consumables, ndt, pwht, paint, u_stamp, nb, transport, financial_charges, overheads, contingency, subcontracting, other]
+        label:
+          type: string
+        amount_sar:
+          type: number
+        amount_usd:
+          type: number
+        share_pct:
+          type: number
+        cost_per_ton_sar:
+          type: number
+        state:
+          type: string
+          enum: [known, partial, ambiguous]
+
+    WorkbookProfileContent:
+      type: object
+      description: |
+        Structured extraction from GHI estimation workbook. Contains the shared
+        canonical estimate mirror plus workbook-native cost, financial, and schedule data.
+      properties:
+        canonical_estimate_profile:
+          type: object
+          description: Shared mirror — same fields and enums as intake canonical_project_profile on overlapping dimensions.
+          additionalProperties: true
+        cost_breakdown_profile:
+          type: object
+          properties:
+            currency_context:
+              type: object
+              properties:
+                base_currency:
+                  type: string
+                  example: SAR
+                secondary_currency:
+                  type: string
+                  example: USD
+            headline_totals:
+              type: object
+              properties:
+                total_estimated_cost_sar:
+                  type: number
+                total_estimated_cost_usd:
+                  type: number
+                total_cost_per_ton_sar:
+                  type: number
+                total_cost_per_ton_usd:
+                  type: number
+                total_weight_kg_reference:
+                  type: number
+            cost_lines:
+              type: array
+              items:
+                $ref: '#/components/schemas/CostLine'
+            cost_shares:
+              type: object
+              description: Pre-computed percentage breakdown by major cost family
+              additionalProperties:
+                type: number
+            unit_economics:
+              type: object
+              properties:
+                cost_per_ton_sar:
+                  type: number
+                cost_per_ton_usd:
+                  type: number
+                material_cost_per_kg_sar:
+                  type: number
+                material_cost_per_kg_usd:
+                  type: number
+        financial_profile:
+          type: object
+          description: Revenue, margin, payment structure, bank charges. Workbook-native.
+          additionalProperties: true
+        schedule_profile:
+          type: object
+          description: Delivery duration, phase breakdown. Workbook-native.
+          additionalProperties: true
+        quality_and_gaps:
+          type: object
+          description: Missing sheets, parse failures, comparison-ready flags.
+          additionalProperties: true
+
+    WorkbookProfileResponse:
+      allOf:
+        - $ref: '#/components/schemas/ArtifactMeta'
+        - type: object
+          properties:
+            artifact_type:
+              type: string
+              const: workbook_profile
+            content:
+              $ref: '#/components/schemas/WorkbookProfileContent'
+
+    # ── Workbook Review ──
+
+    ReviewFinding:
+      type: object
+      description: |
+        Universal finding object used by all three anomaly families.
+        Review posture is always "this_deserves_review" — never "this is wrong."
+      properties:
+        finding_id:
+          type: string
+        family:
+          type: string
+          enum: [structural_completeness, benchmark_outlier, briefing_vs_actual]
+        finding_code:
+          type: string
+          example: requirement_gap.pwht_cost_signal_missing
+        title:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high]
+        status:
+          type: string
+          enum: [open, acknowledged, dismissed]
+        review_posture:
+          type: string
+          enum: [this_deserves_review]
+          default: this_deserves_review
+        reason_plain_language:
+          type: string
+        confidence:
+          type: string
+          enum: [high, medium, low, unavailable]
+        reference_set_summary:
+          type: object
+          properties:
+            available:
+              type: boolean
+            project_count:
+              type: integer
+            reference_logic:
+              type: string
+              nullable: true
+        evidence_refs:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ReviewFamilySection:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, unavailable]
+        activation_reason:
+          type: string
+          nullable: true
+          description: Present when status is unavailable (e.g., "insufficient_historical_base")
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewFinding'
+
+    WorkbookReviewContent:
+      type: object
+      description: |
+        Bridge artifact comparing intake vs workbook intelligence.
+        Three anomaly families with explicit activation status per family.
+      properties:
+        review_scope:
+          type: object
+          properties:
+            cold_start_mode:
+              type: boolean
+            families_evaluated:
+              type: array
+              items:
+                type: string
+            families_skipped:
+              type: array
+              items:
+                type: string
+        executive_summary:
+          type: object
+          properties:
+            overall_posture:
+              type: string
+              example: review_recommended
+            highest_severity:
+              type: string
+              enum: [low, medium, high]
+            finding_counts_by_family:
+              type: object
+              properties:
+                structural_completeness:
+                  type: integer
+                benchmark_outlier:
+                  type: integer
+                briefing_vs_actual:
+                  type: integer
+        family_1_structural_completeness:
+          $ref: '#/components/schemas/ReviewFamilySection'
+        family_2_benchmark_outlier:
+          $ref: '#/components/schemas/ReviewFamilySection'
+        family_3_briefing_vs_actual:
+          $ref: '#/components/schemas/ReviewFamilySection'
+        review_recommendations:
+          type: object
+          properties:
+            recommended_checks:
+              type: array
+              items:
+                type: string
+            recommended_human_review_targets:
+              type: array
+              items:
+                type: string
+
+    WorkbookReviewResponse:
+      allOf:
+        - $ref: '#/components/schemas/ArtifactMeta'
+        - type: object
+          properties:
+            artifact_type:
+              type: string
+              const: workbook_review_report
+            content:
+              $ref: '#/components/schemas/WorkbookReviewContent'
+
+    # ── Artifact Index ──
+
+    ArtifactIndexItem:
+      type: object
+      description: Summary row for the artifact index — no content payload, metadata only.
+      required: [artifact_type, version, status, is_current, created_at]
+      properties:
+        artifact_type:
+          type: string
+          enum:
+            - rfq_intake_profile
+            - intelligence_briefing
+            - workbook_profile
+            - workbook_review_report
+            - rfq_intelligence_snapshot
+            - rfq_analytical_record
+        version:
+          type: integer
+        status:
+          $ref: '#/components/schemas/ArtifactStatus'
+        is_current:
+          type: boolean
+        schema_version:
+          type: string
+        source_event_type:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ArtifactIndexResponse:
+      type: object
+      required: [artifacts]
+      description: Collection of artifact summaries for an RFQ. Returns empty list if no artifacts exist.
+      properties:
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArtifactIndexItem'

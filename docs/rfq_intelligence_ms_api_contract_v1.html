@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>rfq_intelligence_ms — API Contract & Data Model V1</title>
+  <style>
+    :root {
+      --bg: #fafaf9;
+      --surface: #ffffff;
+      --border: #e5e2dd;
+      --text: #1a1a1a;
+      --text-dim: #6b6560;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --green: #16a34a;
+      --green-bg: #f0fdf4;
+      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --red: #dc2626;
+      --red-bg: #fef2f2;
+      --purple: #7c3aed;
+      --purple-bg: #f5f3ff;
+      --cyan: #0e7490;
+      --cyan-bg: #ecfeff;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 40px 24px; }
+
+    .header { margin-bottom: 40px; }
+    .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    .header .subtitle { font-size: 14px; color: var(--text-dim); margin-bottom: 12px; }
+    .header .meta { display: flex; gap: 20px; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; }
+
+    section { margin-bottom: 48px; }
+    section > h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
+    section > h3 { font-size: 15px; font-weight: 600; margin: 20px 0 10px; }
+    .section-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; display: block; }
+
+    .flow { display: flex; align-items: center; gap: 0; margin: 16px 0 24px; flex-wrap: wrap; }
+    .flow-step { background: var(--accent-light); border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--accent); text-align: center; }
+    .flow-step-amber { background: var(--amber-bg); border-color: #fde68a; color: var(--amber); }
+    .flow-step-green { background: var(--green-bg); border-color: #bbf7d0; color: var(--green); }
+    .flow-step-purple { background: var(--purple-bg); border-color: #ddd6fe; color: var(--purple); }
+    .flow-arrow { font-size: 16px; color: var(--text-dim); padding: 0 6px; }
+
+    .resource-header { display: flex; align-items: center; gap: 10px; margin: 31px 0 14px; }
+    .resource-header h3 { font-size: 16px; font-weight: 700; margin: 0; }
+    .count-badge { display: inline-block; background: var(--accent); color: white; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; }
+    .count-badge-amber { background: var(--amber); }
+    .count-badge-green { background: var(--green); }
+
+    .endpoint { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+    .endpoint-header { padding: 12px 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+    .method { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; min-width: 54px; text-align: center; }
+    .method-get { background: var(--green-bg); color: var(--green); }
+    .method-post { background: var(--accent-light); color: var(--accent); }
+    .endpoint-path { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+    .endpoint-path .p { color: var(--accent); }
+    .consumer-tag { font-size: 10px; color: var(--text-dim); background: #f3f3f0; padding: 2px 8px; border-radius: 10px; margin-left: auto; white-space: nowrap; }
+    .endpoint-body { padding: 14px 18px; }
+    .endpoint-body p { margin-bottom: 8px; font-size: 13px; color: var(--text-dim); }
+
+    .side-effects { font-size: 12px; color: var(--text-dim); margin: 8px 0 0 16px; }
+    .side-effects li { margin-bottom: 2px; }
+
+    pre { background: #1e293b; color: #e2e8f0; padding: 12px 16px; border-radius: 6px; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; overflow-x: auto; margin: 8px 0; }
+    .k { color: #7dd3fc; }
+    .s { color: #86efac; }
+    .n { color: #fbbf24; }
+    .c { color: #64748b; font-style: italic; }
+
+    .body-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-top: 8px; }
+
+    .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 16px; }
+    .table-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .table-card .purpose { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
+
+    .entity-table { width: 100%; border-collapse: collapse; margin: 8px 0 6px; font-size: 12px; }
+    .entity-table th { text-align: left; padding: 6px 10px; border-bottom: 2px solid var(--border); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
+    .entity-table td { padding: 5px 10px; border-bottom: 1px solid #f0efec; font-family: var(--mono); font-size: 11.5px; }
+    .entity-table td:nth-child(2) { font-family: var(--sans); color: var(--text-dim); }
+    .entity-table td:nth-child(3) { font-family: var(--sans); font-size: 11px; color: var(--text-dim); }
+    .entity-table tr:last-child td { border-bottom: none; }
+
+    .table-note { font-size: 12px; color: var(--text-dim); background: #f8f8f6; border-left: 3px solid var(--accent); padding: 8px 14px; border-radius: 0 6px 6px 0; margin: 6px 0 20px; }
+    .table-note-amber { border-left-color: var(--amber); }
+    .table-note-red { border-left-color: var(--red); }
+    .table-note-green { border-left-color: var(--green); }
+
+    .enum-line { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+    .enum-line code { font-family: var(--mono); background: #f3f3f0; padding: 1px 5px; border-radius: 3px; font-size: 10.5px; }
+
+    .diff-table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 13px; }
+    .diff-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
+    .diff-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .diff-table tr:last-child td { border-bottom: none; }
+
+    .tag-active { color: var(--green); font-weight: 600; font-size: 11px; }
+    .tag-dormant { color: var(--text-dim); font-weight: 600; font-size: 11px; }
+    .tag-event { color: var(--purple); font-weight: 600; font-size: 11px; }
+
+    .artifact-mini { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; border-left: 3px solid var(--accent); }
+    .artifact-mini h4 { font-size: 13px; font-weight: 700; margin-bottom: 3px; font-family: var(--mono); }
+    .artifact-mini p { font-size: 12px; color: var(--text-dim); margin: 0; }
+    .artifact-mini .a-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
+
+    .ownership-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
+    .own-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; border-top: 3px solid var(--accent); }
+    .own-card h4 { font-size: 12px; font-weight: 700; margin-bottom: 4px; font-family: var(--mono); }
+    .own-card p { font-size: 11.5px; color: var(--text-dim); line-height: 1.5; }
+
+    @media (max-width: 720px) {
+      .ownership-grid { grid-template-columns: 1fr; }
+      .flow { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <!-- ═══════════ HEADER ═══════════ -->
+    <div class="header">
+      <h1>rfq_intelligence_ms — API Contract & Data Model</h1>
+      <div class="subtitle">Interface contract for the shared intelligence engine — V1 cold-start scope.</div>
+      <div class="meta">
+        <span><strong>Version:</strong> 1.0</span>
+        <span><strong>Date:</strong> March 2026</span>
+        <span><strong>Endpoints:</strong> 7 + health</span>
+        <span><strong>Table:</strong> 1 (JSONB artifacts)</span>
+        <span><strong>Artifacts:</strong> 6</span>
+        <span><strong>Events:</strong> 3</span>
+        <span><strong>Status:</strong> V1 Contract — Frozen</span>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 1 — SERVICE IDENTITY                 -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>1. Service Identity</h2>
+      <span class="section-sub">A separate, read-heavy analytical microservice. Not a CRUD service — an artifact-producing intelligence engine.</span>
+
+      <div class="ownership-grid">
+        <div class="own-card" style="border-top-color: var(--accent);">
+          <h4>rfq_manager_ms</h4>
+          <p>Owns "today" — RFQ lifecycle, workflows, stages, files, reminders. Publishes domain events.</p>
+        </div>
+        <div class="own-card" style="border-top-color: var(--amber);">
+          <h4>rfq_intelligence_ms</h4>
+          <p>Owns "memory & insight" — parsing, intelligence artifacts, analytical persistence, read APIs. Reacts to events.</p>
+        </div>
+        <div class="own-card" style="border-top-color: var(--cyan);">
+          <h4>rfq_chatbot_ms</h4>
+          <p>Owns conversation UX only. Routes to manager or intelligence APIs. Produces no intelligence.</p>
+        </div>
+      </div>
+
+      <h3>Architecture Pattern</h3>
+      <div class="flow">
+        <div class="flow-step">Manager publishes<br>lifecycle events</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step flow-step-amber">Intelligence reacts<br>builds artifacts</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step flow-step-green">Consumers read<br>snapshot + artifacts</div>
+      </div>
+
+      <div class="table-note">
+        <strong>BACAB flow:</strong> <code>routes → controllers → services → datasources</code> for HTTP.
+        <code>event_handlers → services → datasources</code> for async ingestion. Both paths converge at the services layer. Own PostgreSQL database, separate from manager.
+      </div>
+
+      <h3>Integration Rules</h3>
+      <table class="diff-table">
+        <thead><tr><th>Rule</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td>Database ownership</td><td>Own analytical PostgreSQL DB (<code>rfq_intelligence_db</code>). Never reads from or writes to manager's operational DB.</td></tr>
+          <tr><td>Manager dependency</td><td>Thin connector reads only: RFQ id/metadata, file references, workbook reference, minimal display context. Never couples to manager's internal schema.</td></tr>
+          <tr><td>Event ingestion</td><td>Reacts to 3 events from manager. Sequential build cascades within same handler — not chained event-to-event.</td></tr>
+          <tr><td>API posture</td><td>Read-heavy. No CRUD on artifacts — they are built by events, read by consumers. Only reprocess endpoints trigger writes via HTTP.</td></tr>
+          <tr><td>File storage</td><td>Manager owns files (Azure Blob). Intelligence reads file content via references, never stores raw files.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 2 — API CONTRACT                     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>2. API Contract</h2>
+      <span class="section-sub">Base: <code>/intelligence/v1</code> · All artifact reads scoped by RFQ. Port: <code>8001</code></span>
+
+      <!-- ──── READ ENDPOINTS ──── -->
+      <div class="resource-header">
+        <h3>Artifact Reads</h3><span class="count-badge count-badge-green">5</span>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method method-get">GET</span>
+          <span class="endpoint-path">/rfqs/<span class="p">{rfq_id}</span>/snapshot</span>
+          <span class="consumer-tag">UI + Chatbot (main entry)</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Returns the current <code>rfq_intelligence_snapshot</code> — the consumer-facing read model. This is the primary entry point for all consumers. Contains availability matrix, executive panel, briefing panel, workbook panel, review panel, and consumer hints.</p>
+          <div class="body-label">Response — 200 (artifact exists) or 404 (no artifact yet)</div>
+          <pre>{
+  <span class="k">"artifact_type"</span>: <span class="s">"rfq_intelligence_snapshot"</span>,
+  <span class="k">"rfq_id"</span>: <span class="s">"uuid"</span>,
+  <span class="k">"version"</span>: <span class="n">4</span>,
+  <span class="k">"status"</span>: <span class="s">"complete"</span>,
+  <span class="k">"content"</span>: {
+    <span class="k">"snapshot_meta"</span>: { <span class="k">"overall_status"</span>: <span class="s">"review_ready"</span>, <span class="k">"cold_start_mode"</span>: <span class="n">true</span> },
+    <span class="k">"availability_matrix"</span>: {
+      <span class="k">"document_understanding"</span>: <span class="s">"available"</span>,
+      <span class="k">"similarity_context"</span>: <span class="s">"unavailable_cold_start"</span>,
+      <span class="k">"workbook_profile"</span>: <span class="s">"available"</span>,
+      <span class="k">"briefing_vs_actual"</span>: <span class="s">"available"</span>
+    },
+    <span class="k">"executive_panel"</span>: { <span class="c">/* headline, flags, confidence */</span> },
+    <span class="k">"briefing_panel"</span>: { <span class="c">/* compressed briefing view */</span> },
+    <span class="k">"workbook_panel"</span>: { <span class="c">/* cost headlines, process flags */</span> },
+    <span class="k">"review_panel"</span>: { <span class="c">/* finding counts by family */</span> },
+    <span class="k">"consumer_hints"</span>: { <span class="c">/* suggested tabs, chatbot questions */</span> }
+  },
+  <span class="k">"created_at"</span>: <span class="s">"2026-03-23T11:30:00Z"</span>
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method method-get">GET</span>
+          <span class="endpoint-path">/rfqs/<span class="p">{rfq_id}</span>/briefing</span>
+          <span class="consumer-tag">UI briefing panel + Chatbot</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Returns the latest <code>intelligence_briefing</code>. The flagship proactive dossier generated on <code>rfq.created</code>. Contains document understanding, compliance flags, and section availability. Similarity and cost envelope sections are present but marked unavailable in cold start.</p>
+          <div class="body-label">Response — 200 or 404</div>
+          <pre>{
+  <span class="k">"content"</span>: {
+    <span class="k">"briefing_scope"</span>: {
+      <span class="k">"cold_start_mode"</span>: <span class="n">true</span>,
+      <span class="k">"sections_active"</span>: [<span class="s">"executive_summary"</span>, <span class="s">"document_understanding"</span>, <span class="s">"compliance_and_supplier_constraints"</span>],
+      <span class="k">"sections_unavailable"</span>: [<span class="s">"similarity_context"</span>, <span class="s">"preliminary_cost_envelope"</span>]
+    },
+    <span class="k">"executive_summary"</span>: { <span class="k">"summary_text"</span>: <span class="s">"..."</span>, <span class="k">"overall_confidence_band"</span>: <span class="s">"medium"</span> },
+    <span class="k">"section_a_document_understanding"</span>: { <span class="c">/* canonical profile summary, doc families */</span> },
+    <span class="k">"section_b_similarity_context"</span>: { <span class="k">"status"</span>: <span class="s">"unavailable"</span> },
+    <span class="k">"section_c_preliminary_cost_envelope"</span>: { <span class="k">"status"</span>: <span class="s">"unavailable"</span> },
+    <span class="k">"quality_and_gaps"</span>: { <span class="c">/* missing inputs, low confidence sections */</span> }
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method method-get">GET</span>
+          <span class="endpoint-path">/rfqs/<span class="p">{rfq_id}</span>/workbook-profile</span>
+          <span class="consumer-tag">UI workbook tab</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Returns the latest <code>workbook_profile</code>. Contains canonical estimate profile (shared mirror), cost breakdown, financial profile, schedule profile, and structural quality/gaps. Available after <code>workbook.uploaded</code> event.</p>
+          <div class="body-label">Response — 200 or 404</div>
+          <pre>{
+  <span class="k">"content"</span>: {
+    <span class="k">"canonical_estimate_profile"</span>: { <span class="c">/* shared mirror — same fields/enums as intake */</span> },
+    <span class="k">"cost_breakdown_profile"</span>: {
+      <span class="k">"headline_totals"</span>: { <span class="k">"total_estimated_cost_sar"</span>: <span class="n">12500000</span>, <span class="k">"cost_per_ton_sar"</span>: <span class="n">95000</span> },
+      <span class="k">"cost_lines"</span>: [{ <span class="k">"line_code"</span>: <span class="s">"material"</span>, <span class="k">"amount_sar"</span>: <span class="n">5200000</span>, <span class="k">"share_pct"</span>: <span class="n">41.6</span> }],
+      <span class="k">"unit_economics"</span>: { <span class="k">"cost_per_ton_sar"</span>: <span class="n">95000</span>, <span class="k">"material_cost_per_kg_sar"</span>: <span class="n">39.6</span> }
+    },
+    <span class="k">"quality_and_gaps"</span>: { <span class="c">/* parse coverage, missing sheets */</span> }
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method method-get">GET</span>
+          <span class="endpoint-path">/rfqs/<span class="p">{rfq_id}</span>/workbook-review</span>
+          <span class="consumer-tag">UI review tab + Chatbot</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Returns the latest <code>workbook_review_report</code>. Contains three finding families with explicit activation status. Every finding uses a universal object shape with <code>review_posture: "this_deserves_review"</code>.</p>
+          <div class="body-label">Response — 200 or 404</div>
+          <pre>{
+  <span class="k">"content"</span>: {
+    <span class="k">"review_scope"</span>: {
+      <span class="k">"cold_start_mode"</span>: <span class="n">true</span>,
+      <span class="k">"families_evaluated"</span>: [<span class="s">"structural_completeness"</span>, <span class="s">"briefing_vs_actual"</span>],
+      <span class="k">"families_skipped"</span>: [<span class="s">"benchmark_outlier"</span>]
+    },
+    <span class="k">"executive_summary"</span>: { <span class="k">"overall_posture"</span>: <span class="s">"review_recommended"</span>, <span class="k">"highest_severity"</span>: <span class="s">"medium"</span> },
+    <span class="k">"family_1_structural_completeness"</span>: { <span class="k">"status"</span>: <span class="s">"active"</span>, <span class="k">"findings"</span>: [<span class="c">/*...*/</span>] },
+    <span class="k">"family_2_benchmark_outlier"</span>: { <span class="k">"status"</span>: <span class="s">"unavailable"</span>, <span class="k">"activation_reason"</span>: <span class="s">"insufficient_historical_base"</span> },
+    <span class="k">"family_3_briefing_vs_actual"</span>: { <span class="k">"status"</span>: <span class="s">"active"</span>, <span class="k">"findings"</span>: [<span class="c">/*...*/</span>] }
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method method-get">GET</span>
+          <span class="endpoint-path">/rfqs/<span class="p">{rfq_id}</span>/artifacts</span>
+          <span class="consumer-tag">Admin / debug</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Returns an index of all artifacts (all types, all versions) for the given RFQ. Collection endpoint — always returns <strong>200</strong> with an empty list if no artifacts exist, not 404.</p>
+          <div class="body-label">Response — always 200</div>
+          <pre>{
+  <span class="k">"artifacts"</span>: [
+    {
+      <span class="k">"artifact_type"</span>: <span class="s">"rfq_intake_profile"</span>,
+      <span class="k">"version"</span>: <span class="n">1</span>, <span class="k">"status"</span>: <span class="s">"complete"</span>,
+      <span class="k">"is_current"</span>: <span class="n">true</span>, <span class="k">"created_at"</span>: <span class="s">"2026-03-23T10:00:00Z"</span>
+    },
+    {
+      <span class="k">"artifact_type"</span>: <span class="s">"intelligence_briefing"</span>,
+      <span class="k">"version"</span>: <span class="n">2</span>, <span class="k">"status"</span>: <span class="s">"complete"</span>,
+      <span class="k">"is_current"</span>: <span class="n">true</span>, <span class="k">"created_at"</span>: <span class="s">"2026-03-23T10:05:00Z"</span>
+    }
+  ]
+}</pre>
+        </div>
+      </div>
+
+      <!-- ──── REPROCESS ENDPOINTS ──── -->
+      <div class="resource-header">
+        <h3>Reprocess Actions</h3><span class="count-badge count-badge-amber">2</span>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method method-post">POST</span>
+          <span class="endpoint-path">/rfqs/<span class="p">{rfq_id}</span>/reprocess/intake</span>
+          <span class="consumer-tag">Admin</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Manual re-run of intake parsing. Triggers the full <code>rfq.created</code> build chain: intake profile → briefing → analytical record stub → snapshot rebuild.</p>
+          <div class="body-label">Response — 202 Accepted</div>
+          <pre>{ <span class="k">"status"</span>: <span class="s">"accepted"</span>, <span class="k">"message"</span>: <span class="s">"Intake reprocessing triggered"</span> }</pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method method-post">POST</span>
+          <span class="endpoint-path">/rfqs/<span class="p">{rfq_id}</span>/reprocess/workbook</span>
+          <span class="consumer-tag">Admin</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Manual re-run of workbook parsing. Triggers the full <code>workbook.uploaded</code> build chain: workbook profile → review report → analytical record enrichment → snapshot rebuild.</p>
+          <div class="body-label">Response — 202 Accepted</div>
+          <pre>{ <span class="k">"status"</span>: <span class="s">"accepted"</span>, <span class="k">"message"</span>: <span class="s">"Workbook reprocessing triggered"</span> }</pre>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 3 — EVENT CONTRACTS                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>3. Event Contracts</h2>
+      <span class="section-sub">3 events from rfq_manager_ms trigger sequential artifact build chains. All cascades run in-process, not chained event-to-event.</span>
+
+      <div class="endpoint" style="border-left: 3px solid var(--purple);">
+        <div class="endpoint-header">
+          <span class="method" style="background: var(--purple-bg); color: var(--purple);">EVENT</span>
+          <span class="endpoint-path">rfq.created</span>
+          <span class="consumer-tag">from rfq_manager_ms</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="body-label">Build Chain (sequential)</div>
+          <div class="flow" style="margin: 8px 0 12px;">
+            <div class="flow-step" style="font-size: 11px;">Fetch metadata</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-amber" style="font-size: 11px;">rfq_intake_profile</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-amber" style="font-size: 11px;">intelligence_briefing</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-purple" style="font-size: 11px;">analytical_record stub</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-green" style="font-size: 11px;">snapshot</div>
+          </div>
+          <pre><span class="c">// Standardized event envelope</span>
+{
+  <span class="k">"event_id"</span>: <span class="s">"uuid"</span>,
+  <span class="k">"event_type"</span>: <span class="s">"rfq.created"</span>,
+  <span class="k">"event_version"</span>: <span class="s">"1.0"</span>,
+  <span class="k">"producer"</span>: <span class="s">"rfq_manager_ms"</span>,
+  <span class="k">"emitted_at"</span>: <span class="s">"2026-03-23T10:00:00Z"</span>,
+  <span class="k">"payload"</span>: {
+    <span class="k">"rfq_id"</span>: <span class="s">"uuid"</span>
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint" style="border-left: 3px solid var(--purple);">
+        <div class="endpoint-header">
+          <span class="method" style="background: var(--purple-bg); color: var(--purple);">EVENT</span>
+          <span class="endpoint-path">workbook.uploaded</span>
+          <span class="consumer-tag">from rfq_manager_ms</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="body-label">Build Chain (sequential)</div>
+          <div class="flow" style="margin: 8px 0 12px;">
+            <div class="flow-step" style="font-size: 11px;">Fetch workbook ref</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-amber" style="font-size: 11px;">workbook_profile</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-amber" style="font-size: 11px;">workbook_review_report</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-purple" style="font-size: 11px;">analytical_record enrich</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-green" style="font-size: 11px;">snapshot</div>
+          </div>
+          <pre><span class="c">// Standardized event envelope</span>
+{
+  <span class="k">"event_id"</span>: <span class="s">"uuid"</span>,
+  <span class="k">"event_type"</span>: <span class="s">"workbook.uploaded"</span>,
+  <span class="k">"event_version"</span>: <span class="s">"1.0"</span>,
+  <span class="k">"producer"</span>: <span class="s">"rfq_manager_ms"</span>,
+  <span class="k">"emitted_at"</span>: <span class="s">"2026-03-23T14:30:00Z"</span>,
+  <span class="k">"payload"</span>: {
+    <span class="k">"rfq_id"</span>: <span class="s">"uuid"</span>,
+    <span class="k">"workbook_ref"</span>: <span class="s">"azure-blob-path/IF-25144.xls"</span>,
+    <span class="k">"workbook_filename"</span>: <span class="s">"IF-25144.xls"</span>,
+    <span class="k">"uploaded_at"</span>: <span class="s">"2026-03-23T14:30:00Z"</span>
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint" style="border-left: 3px solid var(--purple);">
+        <div class="endpoint-header">
+          <span class="method" style="background: var(--purple-bg); color: var(--purple);">EVENT</span>
+          <span class="endpoint-path">outcome.recorded</span>
+          <span class="consumer-tag">from rfq_manager_ms</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="body-label">Build Chain (sequential)</div>
+          <div class="flow" style="margin: 8px 0 12px;">
+            <div class="flow-step" style="font-size: 11px;">Read outcome</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-purple" style="font-size: 11px;">analytical_record enrich</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-green" style="font-size: 11px;">snapshot refresh</div>
+          </div>
+          <pre><span class="c">// Standardized event envelope</span>
+{
+  <span class="k">"event_id"</span>: <span class="s">"uuid"</span>,
+  <span class="k">"event_type"</span>: <span class="s">"outcome.recorded"</span>,
+  <span class="k">"event_version"</span>: <span class="s">"1.0"</span>,
+  <span class="k">"producer"</span>: <span class="s">"rfq_manager_ms"</span>,
+  <span class="k">"emitted_at"</span>: <span class="s">"2026-03-25T09:00:00Z"</span>,
+  <span class="k">"payload"</span>: {
+    <span class="k">"rfq_id"</span>: <span class="s">"uuid"</span>,
+    <span class="k">"outcome"</span>: <span class="s">"awarded | lost | cancelled"</span>,
+    <span class="k">"outcome_reason"</span>: <span class="s">"Best technical score"</span>
+  }
+}</pre>
+        </div>
+      </div>
+
+      <h3>Reprocessing Cascades</h3>
+      <table class="diff-table">
+        <thead><tr><th>Trigger</th><th>Rebuilds</th></tr></thead>
+        <tbody>
+          <tr><td>Source package references changed</td><td>intake_profile → briefing → analytical_record (re-stub) → snapshot</td></tr>
+          <tr><td>New workbook version</td><td>workbook_profile → review_report → analytical_record (enrich) → snapshot</td></tr>
+          <tr><td>Intake profile version changes</td><td>briefing → snapshot</td></tr>
+          <tr><td>Workbook profile or briefing changes</td><td>review_report → snapshot</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 4 — THE 6 ARTIFACTS                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>4. The 6 Intelligence Artifacts</h2>
+      <span class="section-sub">All stored as JSONB payloads in a single <code>artifacts</code> table. Content schema varies by artifact_type.</span>
+
+      <div class="artifact-mini" style="border-left-color: var(--amber);">
+        <div class="a-tag" style="color: var(--amber);">1 — Partly Deterministic, Partly Heuristic</div>
+        <h4>rfq_intake_profile</h4>
+        <p>Structured extraction from ZIP/MR package. 8 blocks: artifact_meta, source_package, package_structure, canonical_project_profile, document_understanding, field_evidence, quality_and_gaps, downstream_readiness. Foundation artifact — every other output depends on it.</p>
+      </div>
+
+      <div class="artifact-mini" style="border-left-color: var(--green);">
+        <div class="a-tag" style="color: var(--green);">2 — Mixed (Core Active, Historical Future-Only)</div>
+        <h4>intelligence_briefing</h4>
+        <p>Proactive dossier generated on rfq.created. 8 blocks: artifact_meta, briefing_scope, executive_summary, section_a_document_understanding, section_b_similarity_context (unavailable), section_c_preliminary_cost_envelope (unavailable), section_d_compliance_supplier, quality_and_gaps. Dual format: structured fields + summary_text per section.</p>
+      </div>
+
+      <div class="artifact-mini" style="border-left-color: var(--cyan);">
+        <div class="a-tag" style="color: var(--cyan);">3 — Deterministic</div>
+        <h4>workbook_profile</h4>
+        <p>Structured extraction from GHI workbook. 8 blocks: artifact_meta, source_workbook, workbook_structure, canonical_estimate_profile (shared mirror), cost_breakdown_profile, financial_profile, schedule_profile, quality_and_gaps. Fixed template = deterministic parsing.</p>
+      </div>
+
+      <div class="artifact-mini" style="border-left-color: var(--red);">
+        <div class="a-tag" style="color: var(--red);">4 — Mostly Deterministic in V1</div>
+        <h4>workbook_review_report</h4>
+        <p>Bridge artifact. 7 blocks: artifact_meta, review_scope, executive_summary, family_1_structural_completeness (active), family_2_benchmark_outlier (dormant), family_3_briefing_vs_actual (selectively active), review_recommendations. Universal finding object shape across all families.</p>
+      </div>
+
+      <div class="artifact-mini" style="border-left-color: var(--purple);">
+        <div class="a-tag" style="color: var(--purple);">5 — Deterministic Assembly</div>
+        <h4>rfq_intelligence_snapshot</h4>
+        <p>Consumer read model. 8 blocks: snapshot_meta, artifact_refs, availability_matrix, executive_panel, briefing_panel, workbook_panel, review_panel, consumer_hints. One current snapshot per RFQ, rebuilt whenever upstream artifacts change.</p>
+      </div>
+
+      <div class="artifact-mini" style="border-left-color: var(--text-dim);">
+        <div class="a-tag" style="color: var(--text-dim);">6 — Deterministic (Not User-Facing)</div>
+        <h4>rfq_analytical_record</h4>
+        <p>Future analytical store seed. Lifecycle: stub on rfq.created → enriched on workbook.uploaded → enriched on outcome.recorded. Contains normalized features, readiness flags, provenance. Every RFQ enriches the store from its first moment.</p>
+      </div>
+
+      <h3>Universal Finding Object (workbook_review_report)</h3>
+      <pre>{
+  <span class="k">"finding_id"</span>: <span class="s">"string"</span>,
+  <span class="k">"family"</span>: <span class="s">"structural_completeness | benchmark_outlier | briefing_vs_actual"</span>,
+  <span class="k">"finding_code"</span>: <span class="s">"missing_cost_line.pwht"</span>,
+  <span class="k">"severity"</span>: <span class="s">"low | medium | high"</span>,
+  <span class="k">"review_posture"</span>: <span class="s">"this_deserves_review"</span>,
+  <span class="k">"reason_plain_language"</span>: <span class="s">"PWHT was flagged as required at intake but no PWHT cost line found in workbook."</span>,
+  <span class="k">"confidence"</span>: <span class="s">"high | medium | low | unavailable"</span>,
+  <span class="k">"reference_set_summary"</span>: { <span class="k">"available"</span>: <span class="n">false</span>, <span class="k">"project_count"</span>: <span class="n">0</span> }
+}</pre>
+      <div class="table-note table-note-red"><strong>Review posture:</strong> Always "this deserves review" — never "this is wrong." Intelligence adds a review layer, not a judgment layer.</div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 5 — DATA MODEL                       -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>5. Data Model</h2>
+      <span class="section-sub">One shared table. JSONB content. Versioned artifacts with is_current tracking.</span>
+
+      <div class="table-card">
+        <h4>artifacts</h4>
+        <div class="purpose">Single table for all 6 artifact types — content stored as JSONB, metadata shared.</div>
+        <table class="entity-table">
+          <thead><tr><th>Column</th><th>Type</th><th>Constraint</th></tr></thead>
+          <tbody>
+            <tr><td>id</td><td>UUID</td><td>PK</td></tr>
+            <tr><td>rfq_id</td><td>UUID</td><td>NOT NULL, indexed</td></tr>
+            <tr><td>artifact_type</td><td>VARCHAR</td><td>NOT NULL, indexed</td></tr>
+            <tr><td>version</td><td>INT</td><td>NOT NULL, DEFAULT 1</td></tr>
+            <tr><td>status</td><td>VARCHAR</td><td>NOT NULL, DEFAULT 'pending'</td></tr>
+            <tr><td>is_current</td><td>BOOLEAN</td><td>NOT NULL, DEFAULT true, indexed</td></tr>
+            <tr><td>content</td><td>JSONB</td><td>NULLABLE — full artifact payload</td></tr>
+            <tr><td>source_event_type</td><td>VARCHAR</td><td>NULLABLE</td></tr>
+            <tr><td>source_event_id</td><td>VARCHAR</td><td>NULLABLE</td></tr>
+            <tr><td>schema_version</td><td>VARCHAR</td><td>NOT NULL, DEFAULT 'v1'</td></tr>
+            <tr><td>created_at</td><td>TIMESTAMP</td><td>DEFAULT NOW</td></tr>
+            <tr><td>updated_at</td><td>TIMESTAMP</td><td>NULLABLE, on update</td></tr>
+          </tbody>
+        </table>
+        <div class="enum-line"><strong>artifact_type:</strong> <code>rfq_intake_profile</code> <code>intelligence_briefing</code> <code>workbook_profile</code> <code>workbook_review_report</code> <code>rfq_intelligence_snapshot</code> <code>rfq_analytical_record</code></div>
+        <div class="enum-line"><strong>status:</strong> <code>pending</code> <code>partial</code> <code>complete</code> <code>failed</code></div>
+        <div class="table-note"><strong>JSONB rationale:</strong> Artifact schemas are deep, nested JSON structures (8 blocks each with sub-objects). Normalizing into relational tables would create dozens of tables. JSONB keeps the DB simple and matches the artifact-first design.</div>
+      </div>
+
+      <h3>Constraints &amp; Indexes</h3>
+      <table class="entity-table" style="margin-top: 10px;">
+        <thead><tr><th>Type</th><th>Definition</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>UNIQUE</td><td>(rfq_id, artifact_type, version)</td><td>Prevents duplicate versions</td></tr>
+          <tr><td>INDEX</td><td>(rfq_id, artifact_type, is_current)</td><td>Fast "get current artifact of type X for this RFQ"</td></tr>
+          <tr><td>INDEX</td><td>(rfq_id)</td><td>Load all artifacts for an RFQ</td></tr>
+          <tr><td>INDEX</td><td>(artifact_type)</td><td>Filter by artifact type across RFQs</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Version Management Rules</h3>
+      <div class="table-note table-note-amber">
+        <strong>is_current invariant:</strong> At most one <code>is_current=True</code> row per <code>(rfq_id, artifact_type)</code>. Enforced at two levels: (1) datasource layer flips old version's <code>is_current</code> to <code>false</code> and inserts new version in the <strong>same transaction</strong>; (2) database enforces the invariant through a partial unique index on <code>(rfq_id, artifact_type)</code> where <code>is_current = true</code>.
+      </div>
+      <div class="table-note table-note-green">
+        <strong>Two logical semantics, one physical table:</strong><br>
+        <strong>Append-version artifacts</strong> (intake_profile, briefing, workbook_profile, review_report, analytical_record): old versions are preserved with <code>is_current=false</code> for traceability. Version history is meaningful — it shows how intelligence evolved for an RFQ.<br>
+        <strong>Replace-current snapshot</strong> (rfq_intelligence_snapshot): the current assembled read model for the RFQ. Rebuilt whenever upstream artifacts change. Old snapshot versions have limited historical value — they exist in the table but the business meaning is always "current assembled view." Both use the same table and <code>is_current</code> mechanism in V1.
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 6 — SHARED ENUMS                     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>6. Shared Enums &amp; Vocabularies</h2>
+      <span class="section-sub">Closed enums shared between intake and workbook extraction pipelines. Defined once, used by both.</span>
+
+      <table class="diff-table">
+        <thead><tr><th>Vocabulary</th><th>Values</th><th>Tier</th></tr></thead>
+        <tbody>
+          <tr><td><code>project_family</code></td><td><code>pressure_vessel</code> <code>heat_exchanger</code> <code>column</code> <code>tank</code> <code>reactor</code> <code>drum</code> <code>separator</code> <code>skid</code> <code>piping_package</code> <code>structural_package</code> <code>other_equipment</code> <code>unknown</code></td><td><span class="tag-active">Closed</span></td></tr>
+          <tr><td><code>material_family</code></td><td><code>carbon_steel</code> <code>stainless_steel</code> <code>duplex</code> <code>super_duplex</code> <code>alloy_steel</code> <code>nickel_alloy</code> <code>clad_material</code> <code>mixed</code> <code>other</code> <code>unknown</code></td><td><span class="tag-active">Closed</span></td></tr>
+          <tr><td><code>rt_requirement</code></td><td><code>full</code> <code>spot</code> <code>none</code> <code>unknown</code> <code>ambiguous</code></td><td><span class="tag-active">Closed</span></td></tr>
+          <tr><td><code>pwht / u_stamp / nb</code></td><td><code>yes</code> <code>no</code> <code>unknown</code> <code>ambiguous</code></td><td><span class="tag-active">Closed</span></td></tr>
+          <tr><td><code>quantity.basis</code></td><td><code>total_project</code> <code>per_line_item</code> <code>unknown</code></td><td><span class="tag-active">Closed</span></td></tr>
+          <tr><td><code>weight_profile.basis</code></td><td><code>single_item</code> <code>total_project</code> <code>unknown</code></td><td><span class="tag-active">Closed</span></td></tr>
+          <tr><td><code>field_state</code></td><td><code>known</code> <code>unknown</code> <code>not_applicable</code> <code>ambiguous</code></td><td><span class="tag-active">Closed</span></td></tr>
+          <tr><td><code>duration_unit</code></td><td><code>day</code> <code>week</code> <code>month</code> <code>unknown</code></td><td><span class="tag-active">Closed</span></td></tr>
+          <tr><td><code>project_subtype</code></td><td>Seed per family (e.g., pressure_vessel → horizontal, vertical, spherical)</td><td><span class="tag-dormant">Open</span></td></tr>
+          <tr><td><code>equipment_type</code></td><td>Alias dictionary: <code>horizontal_vessel</code>, <code>shell_and_tube_heat_exchanger</code>, etc.</td><td><span class="tag-dormant">Open</span></td></tr>
+          <tr><td><code>applicable_standards</code></td><td>Canonical codes: ASME VIII Div 1, SAMSS-*, SAES-*, TEMA, API, ASTM, NACE</td><td><span class="tag-dormant">Open</span></td></tr>
+          <tr><td><code>cost_line_codes</code></td><td><code>material</code> <code>labour</code> <code>design</code> <code>consumables</code> <code>ndt</code> <code>pwht</code> <code>paint</code> <code>u_stamp</code> <code>nb</code> <code>transport</code> <code>financial_charges</code> <code>overheads</code> <code>contingency</code> <code>subcontracting</code> <code>other</code></td><td><span class="tag-active">Closed</span></td></tr>
+        </tbody>
+      </table>
+
+      <div class="table-note table-note-green">
+        <strong>Normalization rules:</strong> Dimensions → mm. Weight → kg. Duration → value + unit (not forced to days). Quantities → numeric + explicit unit. Dates → ISO. Units canonicalized at write time; comparison code never converts on the fly. Confidence stays outside canonical values — in <code>field_evidence</code>, not in the comparison surface.
+      </div>
+    </section>
+
+  </div>
+</body>
+
+</html>

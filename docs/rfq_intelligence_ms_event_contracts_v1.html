@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>rfq_intelligence_ms — Event Contracts V1</title>
+  <style>
+    :root {
+      --bg: #fafaf9;
+      --surface: #ffffff;
+      --border: #e5e2dd;
+      --text: #1a1a1a;
+      --text-dim: #6b6560;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --green: #16a34a;
+      --green-bg: #f0fdf4;
+      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --red: #dc2626;
+      --red-bg: #fef2f2;
+      --purple: #7c3aed;
+      --purple-bg: #f5f3ff;
+      --cyan: #0e7490;
+      --cyan-bg: #ecfeff;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 40px 24px; }
+
+    .header { margin-bottom: 40px; }
+    .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    .header .subtitle { font-size: 14px; color: var(--text-dim); margin-bottom: 12px; }
+    .header .meta { display: flex; gap: 20px; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; }
+
+    section { margin-bottom: 48px; }
+    section > h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
+    section > h3 { font-size: 15px; font-weight: 600; margin: 24px 0 10px; }
+    .section-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; display: block; }
+
+    .flow { display: flex; align-items: center; gap: 0; margin: 16px 0 24px; flex-wrap: wrap; }
+    .flow-step { background: var(--accent-light); border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--accent); text-align: center; }
+    .flow-step-amber { background: var(--amber-bg); border-color: #fde68a; color: var(--amber); }
+    .flow-step-green { background: var(--green-bg); border-color: #bbf7d0; color: var(--green); }
+    .flow-step-purple { background: var(--purple-bg); border-color: #ddd6fe; color: var(--purple); }
+    .flow-arrow { font-size: 16px; color: var(--text-dim); padding: 0 6px; }
+
+    .event-card { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--purple); border-radius: 8px; margin-bottom: 28px; overflow: hidden; }
+    .event-header { padding: 14px 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); background: #fdfcfb; }
+    .event-badge { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; background: var(--purple-bg); color: var(--purple); }
+    .event-name { font-family: var(--mono); font-size: 14px; font-weight: 600; }
+    .event-tag { font-size: 10px; color: var(--text-dim); background: #f3f3f0; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
+    .event-body { padding: 16px 18px; }
+    .event-body p { margin-bottom: 10px; font-size: 13.5px; color: var(--text); line-height: 1.65; }
+
+    .field-table { width: 100%; border-collapse: collapse; margin: 12px 0 16px; font-size: 12.5px; }
+    .field-table th { text-align: left; padding: 7px 12px; border-bottom: 2px solid var(--border); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
+    .field-table td { padding: 6px 12px; border-bottom: 1px solid #f0efec; vertical-align: top; }
+    .field-table td:first-child { font-family: var(--mono); font-size: 12px; color: var(--text); }
+    .field-table td:nth-child(2) { font-family: var(--sans); color: var(--text-dim); font-size: 11.5px; }
+    .field-table td:nth-child(3) { font-size: 11.5px; }
+    .field-table tr:last-child td { border-bottom: none; }
+
+    .diff-table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 13px; }
+    .diff-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
+    .diff-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .diff-table tr:last-child td { border-bottom: none; }
+    .diff-table code { font-family: var(--mono); font-size: 11px; background: #f3f3f0; padding: 1px 5px; border-radius: 3px; }
+
+    pre { background: #1e293b; color: #e2e8f0; padding: 14px 18px; border-radius: 6px; font-family: var(--mono); font-size: 11.5px; line-height: 1.55; overflow-x: auto; margin: 10px 0; }
+    .k { color: #7dd3fc; }
+    .s { color: #86efac; }
+    .n { color: #fbbf24; }
+    .c { color: #64748b; font-style: italic; }
+
+    .body-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-top: 12px; }
+
+    .table-note { font-size: 12px; color: var(--text-dim); background: #f8f8f6; border-left: 3px solid var(--accent); padding: 8px 14px; border-radius: 0 6px 6px 0; margin: 8px 0 20px; }
+    .table-note-amber { border-left-color: var(--amber); }
+    .table-note-red { border-left-color: var(--red); }
+    .table-note-green { border-left-color: var(--green); }
+    .table-note-purple { border-left-color: var(--purple); }
+
+    .not-own { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+    .not-own-item { font-size: 12px; color: var(--red); background: var(--red-bg); border: 1px solid #f0c0b8; border-radius: 6px; padding: 7px 14px; }
+    .not-own-item::before { content: '✕ '; font-weight: 700; }
+
+    .rule-list { margin: 12px 0 16px 18px; font-size: 13px; color: var(--text); }
+    .rule-list li { margin-bottom: 6px; line-height: 1.6; }
+    .rule-list code { font-family: var(--mono); font-size: 11px; background: #f3f3f0; padding: 1px 5px; border-radius: 3px; }
+
+    @media (max-width: 640px) {
+      .flow { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+      .not-own { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <!-- ═══════════ HEADER ═══════════ -->
+    <div class="header">
+      <h1>rfq_intelligence_ms — Event Contracts</h1>
+      <div class="subtitle">Asynchronous event contracts consumed by the shared intelligence engine — V1 cold-start scope.</div>
+      <div class="meta">
+        <span><strong>Version:</strong> 1.0</span>
+        <span><strong>Date:</strong> March 2026</span>
+        <span><strong>Events:</strong> 3</span>
+        <span><strong>Producer:</strong> rfq_manager_ms</span>
+        <span><strong>Consumer:</strong> rfq_intelligence_ms</span>
+        <span><strong>Status:</strong> V1 Contract — Frozen</span>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 1 — SCOPE                            -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>1. Scope</h2>
+      <span class="section-sub">What this document covers and what is documented elsewhere.</span>
+
+      <p>This document defines the <strong>asynchronous event contracts</strong> consumed by <code>rfq_intelligence_ms</code>. It specifies the 3 V1 lifecycle events that trigger intelligence artifact creation and refresh.</p>
+
+      <p>HTTP endpoints are documented separately in the <a href="rfq_intelligence_ms_api_contract_v1.html">API Contract</a> and <a href="rfq_intelligence_ms_openapi.yaml">OpenAPI YAML</a>. These events are not modeled as REST endpoints — they represent a separate inbound adapter in the BACAB architecture.</p>
+
+      <div class="table-note">
+        <strong>Relationship:</strong> Events trigger artifact builds. HTTP endpoints serve the resulting artifacts to consumers. The two contracts are complementary but independent: changing an event payload does not change the HTTP response shape, and vice versa.
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 2 — EVENT MODEL OVERVIEW             -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>2. Event Model Overview</h2>
+      <span class="section-sub">How events flow through the system.</span>
+
+      <div class="flow">
+        <div class="flow-step">rfq_manager_ms<br>emits lifecycle event</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step flow-step-purple">rfq_intelligence_ms<br>event handler receives</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step flow-step-amber">Services build/refresh<br>intelligence artifacts</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step flow-step-green">Snapshot assembled<br>for consumers</div>
+      </div>
+
+      <p><code>rfq_manager_ms</code> is the producer. It emits domain events at key lifecycle moments: when an RFQ is registered, when a workbook is uploaded, and when an outcome is recorded. <code>rfq_intelligence_ms</code> is the consumer. It reacts to these events by building or refreshing persistent intelligence artifacts in its own analytical database.</p>
+
+      <p>Each event triggers a <strong>sequential build chain</strong> inside the same handler execution. Artifact creation steps happen in order within the handler — they are not dispatched as additional events. This avoids cascading event loops and race conditions.</p>
+
+      <p>After any artifact build chain completes, the <code>rfq_intelligence_snapshot</code> is reassembled to reflect the latest intelligence state for the RFQ. Consumers (UI, chatbot, dashboards) read the snapshot and underlying artifacts via the HTTP API.</p>
+
+      <div class="table-note table-note-purple">
+        <strong>BACAB adapter separation:</strong> Event handlers are a separate inbound adapter from HTTP routes. Both converge at the services layer.<br>
+        <code>HTTP path: routes → controllers → services → datasources</code><br>
+        <code>Event path: event_handlers → services → datasources</code>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 3 — STANDARD EVENT ENVELOPE          -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>3. Standard Event Envelope</h2>
+      <span class="section-sub">Common fields present on every V1 event. All fields use snake_case.</span>
+
+      <table class="field-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>event_id</td><td>UUID (string)</td><td>Required</td><td>Globally unique identifier for this event instance. Used for idempotency and deduplication.</td></tr>
+          <tr><td>event_type</td><td>String</td><td>Required</td><td>Discriminator: <code>rfq.created</code>, <code>workbook.uploaded</code>, or <code>outcome.recorded</code>.</td></tr>
+          <tr><td>event_version</td><td>String</td><td>Required</td><td>Schema version of this event type. V1 = <code>"1.0"</code>. Must be explicit so consumers can detect breaking changes.</td></tr>
+          <tr><td>producer</td><td>String</td><td>Required</td><td>Identifier of the emitting service. V1 = <code>"rfq_manager_ms"</code>.</td></tr>
+          <tr><td>emitted_at</td><td>ISO 8601 datetime</td><td>Required</td><td>Timestamp when the producer emitted this event.</td></tr>
+          <tr><td>payload</td><td>Object</td><td>Required</td><td>Event-type-specific data. Always contains <code>rfq_id</code>. Additional fields vary by event type.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="body-label">Envelope shape</div>
+      <pre>{
+  <span class="k">"event_id"</span>:      <span class="s">"uuid"</span>,
+  <span class="k">"event_type"</span>:    <span class="s">"rfq.created | workbook.uploaded | outcome.recorded"</span>,
+  <span class="k">"event_version"</span>: <span class="s">"1.0"</span>,
+  <span class="k">"producer"</span>:      <span class="s">"rfq_manager_ms"</span>,
+  <span class="k">"emitted_at"</span>:    <span class="s">"ISO 8601"</span>,
+  <span class="k">"payload"</span>: {
+    <span class="k">"rfq_id"</span>:      <span class="s">"uuid"</span>,
+    <span class="c">// ... event-specific fields</span>
+  }
+}</pre>
+
+      <div class="table-note">
+        <strong>Payload contains references, not file content.</strong> Events communicate metadata and storage references (blob paths, filenames, timestamps). File binary content is never embedded in event payloads. Intelligence fetches file content separately via the manager connector.
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 4 — EVENT: rfq.created               -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>4. Event Contracts</h2>
+      <span class="section-sub">One section per V1 event. Each defines trigger meaning, payload, processing expectation, and artifact outcomes.</span>
+
+      <!-- ──── rfq.created ──── -->
+      <div class="event-card">
+        <div class="event-header">
+          <span class="event-badge">EVENT</span>
+          <span class="event-name">rfq.created</span>
+          <span class="event-tag">producer: rfq_manager_ms</span>
+        </div>
+        <div class="event-body">
+          <p><strong>Trigger:</strong> Emitted when a new RFQ is registered in <code>rfq_manager_ms</code> and its initial source-package references (ZIP/MR folder) are available. This is the first intelligence moment — it wakes up the intelligence engine.</p>
+
+          <p><strong>Purpose:</strong> Provides the minimal information needed for intelligence to start intake parsing and briefing generation. Intelligence fetches full RFQ metadata and file references from the manager connector — the event itself carries only the RFQ identifier.</p>
+
+          <h3>Payload Fields</h3>
+          <table class="field-table">
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td>rfq_id</td><td>UUID (string)</td><td>Required</td><td>The ID of the newly created RFQ in rfq_manager_ms.</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Build Chain (sequential, in-process)</h3>
+          <div class="flow" style="margin: 8px 0 16px;">
+            <div class="flow-step" style="font-size: 11px;">Fetch metadata<br>via connector</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-amber" style="font-size: 11px;">rfq_intake_profile</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-amber" style="font-size: 11px;">intelligence_briefing</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-purple" style="font-size: 11px;">rfq_analytical_record<br>(stub)</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-green" style="font-size: 11px;">rfq_intelligence_snapshot</div>
+          </div>
+
+          <h3>Artifacts Created / Refreshed</h3>
+          <table class="field-table">
+            <thead><tr><th>Artifact</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td>rfq_intake_profile</td><td>Created (new version)</td></tr>
+              <tr><td>intelligence_briefing</td><td>Created (new version)</td></tr>
+              <tr><td>rfq_analytical_record</td><td>Created as initial stub with intake features</td></tr>
+              <tr><td>rfq_intelligence_snapshot</td><td>Assembled / refreshed</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Idempotency</h3>
+          <p>If the same <code>event_id</code> is received more than once, the consumer must not create duplicate artifacts. The handler should check whether an artifact already exists for this <code>event_id</code> (via <code>source_event_id</code> on the artifact row) and skip processing if found.</p>
+        </div>
+      </div>
+
+      <!-- ──── workbook.uploaded ──── -->
+      <div class="event-card">
+        <div class="event-header">
+          <span class="event-badge">EVENT</span>
+          <span class="event-name">workbook.uploaded</span>
+          <span class="event-tag">producer: rfq_manager_ms</span>
+        </div>
+        <div class="event-body">
+          <p><strong>Trigger:</strong> Emitted when an estimation workbook is uploaded or replaced for an RFQ in <code>rfq_manager_ms</code>. This is the second intelligence moment — it produces the workbook analysis and the intake-vs-workbook bridge.</p>
+
+          <p><strong>Purpose:</strong> Provides the workbook storage reference so intelligence can fetch and parse it deterministically. The workbook template is fixed (36-sheet GHI format), making parsing a deterministic engineering problem.</p>
+
+          <h3>Payload Fields</h3>
+          <table class="field-table">
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td>rfq_id</td><td>UUID (string)</td><td>Required</td><td>The RFQ this workbook belongs to.</td></tr>
+              <tr><td>workbook_ref</td><td>String</td><td>Required</td><td>Stable reference to the uploaded workbook in producer-managed storage.</td></tr>
+              <tr><td>workbook_filename</td><td>String</td><td>Required</td><td>Original filename of the uploaded workbook (e.g., <code>IF-25144.xls</code>).</td></tr>
+              <tr><td>uploaded_at</td><td>ISO 8601 datetime</td><td>Required</td><td>Timestamp when the workbook was uploaded to the manager.</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Build Chain (sequential, in-process)</h3>
+          <div class="flow" style="margin: 8px 0 16px;">
+            <div class="flow-step" style="font-size: 11px;">Fetch workbook<br>via connector</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-amber" style="font-size: 11px;">workbook_profile</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-amber" style="font-size: 11px;">workbook_review_report</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-purple" style="font-size: 11px;">rfq_analytical_record<br>(enrich)</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-green" style="font-size: 11px;">rfq_intelligence_snapshot</div>
+          </div>
+
+          <h3>Artifacts Created / Refreshed</h3>
+          <table class="field-table">
+            <thead><tr><th>Artifact</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td>workbook_profile</td><td>Created (new version)</td></tr>
+              <tr><td>workbook_review_report</td><td>Created (new version) — bridges intake vs workbook</td></tr>
+              <tr><td>rfq_analytical_record</td><td>Enriched with workbook features and cost metrics</td></tr>
+              <tr><td>rfq_intelligence_snapshot</td><td>Assembled / refreshed</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Idempotency</h3>
+          <p>Same rule as <code>rfq.created</code>: check <code>source_event_id</code> before processing. If a new workbook version replaces an old one, a new event with a new <code>event_id</code> is expected — the handler should create new artifact versions normally.</p>
+        </div>
+      </div>
+
+      <!-- ──── outcome.recorded ──── -->
+      <div class="event-card">
+        <div class="event-header">
+          <span class="event-badge">EVENT</span>
+          <span class="event-name">outcome.recorded</span>
+          <span class="event-tag">producer: rfq_manager_ms</span>
+        </div>
+        <div class="event-body">
+          <p><strong>Trigger:</strong> Emitted when the final outcome of an RFQ is recorded in <code>rfq_manager_ms</code> — awarded, lost, or cancelled. This closes the feedback loop and enriches the analytical store for future intelligence.</p>
+
+          <p><strong>Purpose:</strong> Provides the outcome status so intelligence can record it alongside the already-extracted intake and workbook features. This data point is critical for future similarity weight calibration, win-probability modeling, and benchmark ranges — but those capabilities are dormant in V1 cold start.</p>
+          <p><strong>Timestamp note:</strong> <code>emitted_at</code> is the event/message timestamp; <code>recorded_at</code> is the business/domain timestamp when the outcome was recorded in the producer system.</p>
+
+          <h3>Payload Fields</h3>
+          <table class="field-table">
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td>rfq_id</td><td>UUID (string)</td><td>Required</td><td>The RFQ whose outcome was recorded.</td></tr>
+              <tr><td>outcome</td><td>String</td><td>Required</td><td>The final status: <code>awarded</code>, <code>lost</code>, or <code>cancelled</code>.</td></tr>
+              <tr><td>recorded_at</td><td>ISO 8601 datetime</td><td>Required</td><td>Business/domain timestamp when the outcome was actually recorded in the producer system.</td></tr>
+              <tr><td>outcome_reason</td><td>String</td><td>Optional</td><td>Free-text reason for the outcome (e.g., "Best technical score", "Price too high vs competitor").</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Build Chain (sequential, in-process)</h3>
+          <div class="flow" style="margin: 8px 0 16px;">
+            <div class="flow-step" style="font-size: 11px;">Read outcome</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-purple" style="font-size: 11px;">rfq_analytical_record<br>(enrich)</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step flow-step-green" style="font-size: 11px;">rfq_intelligence_snapshot<br>(refresh)</div>
+          </div>
+
+          <h3>Artifacts Created / Refreshed</h3>
+          <table class="field-table">
+            <thead><tr><th>Artifact</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td>rfq_analytical_record</td><td>Enriched with outcome status and reason</td></tr>
+              <tr><td>rfq_intelligence_snapshot</td><td>Refreshed if needed (outcome may update availability or status displays)</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Idempotency</h3>
+          <p>Same deduplication rule via <code>event_id</code> / <code>source_event_id</code>. If an outcome is corrected, a new event with a new <code>event_id</code> is expected.</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 5 — ARTIFACT REFRESH MAPPING         -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>5. Artifact Refresh Mapping</h2>
+      <span class="section-sub">Compact view of which events affect which artifacts.</span>
+
+      <table class="diff-table">
+        <thead>
+          <tr><th>Event</th><th>rfq_intake_profile</th><th>intelligence_briefing</th><th>workbook_profile</th><th>workbook_review_report</th><th>rfq_analytical_record</th><th>rfq_intelligence_snapshot</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>rfq.created</code></td>
+            <td style="color: var(--green); font-weight: 600;">Create</td>
+            <td style="color: var(--green); font-weight: 600;">Create</td>
+            <td>—</td>
+            <td>—</td>
+            <td style="color: var(--amber); font-weight: 600;">Stub</td>
+            <td style="color: var(--green); font-weight: 600;">Refresh</td>
+          </tr>
+          <tr>
+            <td><code>workbook.uploaded</code></td>
+            <td>—</td>
+            <td>—</td>
+            <td style="color: var(--green); font-weight: 600;">Create</td>
+            <td style="color: var(--green); font-weight: 600;">Create</td>
+            <td style="color: var(--amber); font-weight: 600;">Enrich</td>
+            <td style="color: var(--green); font-weight: 600;">Refresh</td>
+          </tr>
+          <tr>
+            <td><code>outcome.recorded</code></td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td style="color: var(--amber); font-weight: 600;">Enrich</td>
+            <td style="color: var(--green); font-weight: 600;">Refresh</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="table-note table-note-amber">
+        <strong>Snapshot is always refreshed</strong> after any event processing. It is the consumer-facing read model and must reflect the latest intelligence state at all times.
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 6 — CONTRACT RULES                   -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>6. Contract Rules &amp; Invariants</h2>
+      <span class="section-sub">V1 rules that both producer and consumer must respect.</span>
+
+      <ol class="rule-list">
+        <li>All envelope fields (<code>event_id</code>, <code>event_type</code>, <code>event_version</code>, <code>producer</code>, <code>emitted_at</code>, <code>payload</code>) are mandatory on every event.</li>
+        <li>Payload fields marked "Required" in each event contract must be present. Optional fields may be absent or null.</li>
+        <li>Unknown extra fields in the payload must not break the consumer. Intelligence ignores fields it does not recognize (forward compatibility).</li>
+        <li>Duplicate delivery may happen. The consumer must be idempotent — it checks <code>event_id</code> against <code>source_event_id</code> on existing artifacts before processing.</li>
+        <li>Events communicate <strong>references</strong> (IDs, blob paths, metadata), never raw file content or binary data.</li>
+        <li><code>event_version</code> must be explicit on every event. If the producer changes the payload schema in a breaking way, it must increment <code>event_version</code>.</li>
+        <li>The producer (<code>rfq_manager_ms</code>) owns lifecycle truth. Intelligence derives analytical artifacts only — it never writes back to the operational database or modifies RFQ lifecycle state.</li>
+        <li>Build chains are sequential within the same handler execution. Intelligence must not emit additional events to trigger its own downstream steps (no event chaining).</li>
+        <li>If any step in a build chain fails, the handler must record partial status on artifacts already created and not silently discard work. The snapshot should reflect partial availability.</li>
+      </ol>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 7 — OUT OF SCOPE                     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>7. Out of Scope for V1</h2>
+      <span class="section-sub">What is explicitly not part of these event contracts.</span>
+
+      <div class="not-own">
+        <div class="not-own-item">Historical benchmarking payloads in events</div>
+        <div class="not-own-item">Similarity outputs or match results in events</div>
+        <div class="not-own-item">Win probability or bid strategy payloads</div>
+        <div class="not-own-item">Manager internal DB schema leakage in payloads</div>
+        <div class="not-own-item">File binary content embedded in event payloads</div>
+        <div class="not-own-item">Intelligence-to-intelligence chained lifecycle events</div>
+        <div class="not-own-item">Events emitted by rfq_intelligence_ms itself</div>
+        <div class="not-own-item">Chatbot or UI events in this contract</div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 8 — WORKED EXAMPLES                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>8. Worked Examples</h2>
+      <span class="section-sub">Realistic JSON payloads using values from the GHI/Albassam RFQ context.</span>
+
+      <h3>rfq.created</h3>
+      <pre>{
+  <span class="k">"event_id"</span>: <span class="s">"e1a2b3c4-d5e6-7890-abcd-ef1234567890"</span>,
+  <span class="k">"event_type"</span>: <span class="s">"rfq.created"</span>,
+  <span class="k">"event_version"</span>: <span class="s">"1.0"</span>,
+  <span class="k">"producer"</span>: <span class="s">"rfq_manager_ms"</span>,
+  <span class="k">"emitted_at"</span>: <span class="s">"2026-03-23T10:00:00Z"</span>,
+  <span class="k">"payload"</span>: {
+    <span class="k">"rfq_id"</span>: <span class="s">"a1b2c3d4-e5f6-7890-abcd-1234567890ab"</span>
+  }
+}</pre>
+
+      <h3>workbook.uploaded</h3>
+      <pre>{
+  <span class="k">"event_id"</span>: <span class="s">"f9e8d7c6-b5a4-3210-fedc-ba0987654321"</span>,
+  <span class="k">"event_type"</span>: <span class="s">"workbook.uploaded"</span>,
+  <span class="k">"event_version"</span>: <span class="s">"1.0"</span>,
+  <span class="k">"producer"</span>: <span class="s">"rfq_manager_ms"</span>,
+  <span class="k">"emitted_at"</span>: <span class="s">"2026-03-23T14:30:00Z"</span>,
+  <span class="k">"payload"</span>: {
+    <span class="k">"rfq_id"</span>: <span class="s">"a1b2c3d4-e5f6-7890-abcd-1234567890ab"</span>,
+    <span class="k">"workbook_ref"</span>: <span class="s">"rfq-files/a1b2c3d4/estimation/IF-25144.xls"</span>,
+    <span class="k">"workbook_filename"</span>: <span class="s">"IF-25144.xls"</span>,
+    <span class="k">"uploaded_at"</span>: <span class="s">"2026-03-23T14:30:00Z"</span>
+  }
+}</pre>
+
+      <h3>outcome.recorded</h3>
+      <pre>{
+  <span class="k">"event_id"</span>: <span class="s">"1a2b3c4d-5e6f-7890-1234-abcdef012345"</span>,
+  <span class="k">"event_type"</span>: <span class="s">"outcome.recorded"</span>,
+  <span class="k">"event_version"</span>: <span class="s">"1.0"</span>,
+  <span class="k">"producer"</span>: <span class="s">"rfq_manager_ms"</span>,
+  <span class="k">"emitted_at"</span>: <span class="s">"2026-03-25T09:00:00Z"</span>,
+  <span class="k">"payload"</span>: {
+    <span class="k">"rfq_id"</span>: <span class="s">"a1b2c3d4-e5f6-7890-abcd-1234567890ab"</span>,
+    <span class="k">"outcome"</span>: <span class="s">"awarded"</span>,
+    <span class="k">"recorded_at"</span>: <span class="s">"2026-03-25T08:45:00Z"</span>,
+    <span class="k">"outcome_reason"</span>: <span class="s">"Best technical score — competitive pricing on carbon steel scope"</span>
+  }
+}</pre>
+
+      <div class="table-note table-note-green">
+        <strong>Consistency:</strong> All 3 examples use the same <code>rfq_id</code> to show a realistic lifecycle flow: RFQ created → workbook uploaded → outcome recorded.
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SECTION 9 — IMPLEMENTATION NOTE              -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section>
+      <h2>9. Implementation Note</h2>
+      <span class="section-sub">Relationship between this document and other contract artifacts.</span>
+
+      <p>This document is the <strong>frozen human-readable asynchronous contract</strong> for V1. It defines the business meaning, payload shapes, processing expectations, and invariants for the 3 lifecycle events consumed by <code>rfq_intelligence_ms</code>.</p>
+
+      <p>The HTTP API is documented separately in the <a href="rfq_intelligence_ms_api_contract_v1.html">API Contract</a> and the <a href="rfq_intelligence_ms_openapi.yaml">OpenAPI YAML</a>. Together, these three documents form the complete V1 interface contract for <code>rfq_intelligence_ms</code>.</p>
+
+      <p>Machine-readable event schemas (e.g., AsyncAPI, JSON Schema) can be produced later from this document without changing the business meaning. The human-readable contract takes precedence if any machine-generated schema deviates.</p>
+    </section>
+
+  </div>
+
+</body>
+
+</html>
