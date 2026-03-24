@@ -20,6 +20,7 @@ from src.database import Base, get_db
 
 # Ensure model metadata is registered for Base.metadata.create_all()
 import src.models.artifact  # noqa: F401
+import src.models.processed_event  # noqa: F401
 
 
 @pytest.fixture

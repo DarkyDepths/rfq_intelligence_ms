@@ -32,7 +32,12 @@ class BriefingService:
     def __init__(self, datasource: ArtifactDatasource):
         self.datasource = datasource
 
-    def build_briefing_from_intake(self, intake_artifact, event_meta: dict):
+    def build_briefing_from_intake(
+        self,
+        intake_artifact,
+        event_meta: dict,
+        commit: bool = True,
+    ):
         """Build and persist a truthful intelligence_briefing from intake metadata."""
         intake_content = intake_artifact.content or {}
         canonical = intake_content.get("canonical_project_profile", {})
@@ -101,8 +106,9 @@ class BriefingService:
             source_event_type=event_meta["event_type"],
             source_event_id=event_meta["event_id"],
         )
-        self.datasource.db.commit()
-        self.datasource.db.refresh(artifact)
+        if commit:
+            self.datasource.db.commit()
+            self.datasource.db.refresh(artifact)
         return artifact
 
     async def generate_briefing(self, rfq_id: str) -> None:

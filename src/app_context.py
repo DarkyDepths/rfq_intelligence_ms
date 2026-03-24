@@ -30,6 +30,7 @@ from src.config.settings import settings
 
 # ── Datasources ───────────────────────────────────────
 from src.datasources.artifact_datasource import ArtifactDatasource
+from src.datasources.processed_event_datasource import ProcessedEventDatasource
 
 # ── Connectors ────────────────────────────────────────
 from src.connectors.manager_connector import ManagerConnector
@@ -50,6 +51,7 @@ from src.services.snapshot_service import SnapshotService
 from src.services.analytical_record_service import AnalyticalRecordService
 from src.services.review_service import ReviewService
 from src.event_handlers.lifecycle_handlers import LifecycleHandlers
+from src.services.event_processing_service import EventProcessingService
 
 
 # ═══════════════════════════════════════════════════════
@@ -58,6 +60,10 @@ from src.event_handlers.lifecycle_handlers import LifecycleHandlers
 
 def get_artifact_datasource(db: Session = Depends(get_db)) -> ArtifactDatasource:
     return ArtifactDatasource(db)
+
+
+def get_processed_event_datasource(db: Session = Depends(get_db)) -> ProcessedEventDatasource:
+    return ProcessedEventDatasource(db)
 
 
 # ═══════════════════════════════════════════════════════
@@ -125,6 +131,12 @@ def get_analytical_record_service(
     return AnalyticalRecordService(datasource=datasource)
 
 
+def get_event_processing_service(
+    datasource: ProcessedEventDatasource = Depends(get_processed_event_datasource),
+) -> EventProcessingService:
+    return EventProcessingService(datasource=datasource)
+
+
 def get_lifecycle_handlers(
     intake_service: IntakeService = Depends(get_intake_service),
     briefing_service: BriefingService = Depends(get_briefing_service),
@@ -132,6 +144,7 @@ def get_lifecycle_handlers(
     review_service: ReviewService = Depends(get_review_service),
     snapshot_service: SnapshotService = Depends(get_snapshot_service),
     analytical_record_service: AnalyticalRecordService = Depends(get_analytical_record_service),
+    event_processing_service: EventProcessingService = Depends(get_event_processing_service),
 ) -> LifecycleHandlers:
     return LifecycleHandlers(
         intake_service=intake_service,
@@ -140,6 +153,7 @@ def get_lifecycle_handlers(
         review_service=review_service,
         snapshot_service=snapshot_service,
         analytical_record_service=analytical_record_service,
+        event_processing_service=event_processing_service,
     )
 
 

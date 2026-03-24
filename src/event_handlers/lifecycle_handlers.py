@@ -31,6 +31,7 @@ from src.services.workbook_service import WorkbookService
 from src.services.review_service import ReviewService
 from src.services.snapshot_service import SnapshotService
 from src.services.analytical_record_service import AnalyticalRecordService
+from src.services.event_processing_service import EventProcessingService
 from src.utils.exceptions import BadRequestError
 
 
@@ -45,6 +46,7 @@ class LifecycleHandlers:
         review_service: ReviewService,
         snapshot_service: SnapshotService,
         analytical_record_service: AnalyticalRecordService,
+        event_processing_service: EventProcessingService,
     ):
         self.intake_service = intake_service
         self.briefing_service = briefing_service
@@ -52,6 +54,7 @@ class LifecycleHandlers:
         self.review_service = review_service
         self.snapshot_service = snapshot_service
         self.analytical_record_service = analytical_record_service
+        self.event_processing_service = event_processing_service
 
     async def handle_rfq_created(self, event: dict) -> dict:
         """
@@ -98,24 +101,62 @@ class LifecycleHandlers:
             "producer": event["producer"],
         }
 
-        rfq_context = await self.intake_service.get_rfq_context(rfq_id)
-        intake_artifact = self.intake_service.build_intake_profile_from_rfq_created(
-            rfq_context=rfq_context,
-            event_meta=event_meta,
-        )
-        briefing_artifact = self.briefing_service.build_briefing_from_intake(
-            intake_artifact=intake_artifact,
-            event_meta=event_meta,
-        )
-        analytical_artifact = self.analytical_record_service.build_initial_analytical_record(
-            rfq_context=rfq_context,
-            intake_artifact=intake_artifact,
-            event_meta=event_meta,
-        )
-        snapshot_artifact = self.snapshot_service.rebuild_snapshot_for_rfq(
+        processing_action, processing_record = self.event_processing_service.begin_processing(
+            event_id=event_meta["event_id"],
+            event_type=event_meta["event_type"],
             rfq_id=rfq_id,
-            source_event_meta=event_meta,
         )
+
+        if processing_action == "duplicate_completed":
+            return {
+                "status": "duplicate",
+                "reason": "already_completed",
+                "event_id": event_meta["event_id"],
+                "event_type": event_type,
+                "rfq_id": rfq_id,
+            }
+
+        if processing_action == "in_progress":
+            return {
+                "status": "ignored",
+                "reason": "already_processing",
+                "event_id": event_meta["event_id"],
+                "event_type": event_type,
+                "rfq_id": rfq_id,
+            }
+
+        try:
+            rfq_context = await self.intake_service.get_rfq_context(rfq_id)
+            intake_artifact = self.intake_service.build_intake_profile_from_rfq_created(
+                rfq_context=rfq_context,
+                event_meta=event_meta,
+                commit=False,
+            )
+            briefing_artifact = self.briefing_service.build_briefing_from_intake(
+                intake_artifact=intake_artifact,
+                event_meta=event_meta,
+                commit=False,
+            )
+            analytical_artifact = self.analytical_record_service.build_initial_analytical_record(
+                rfq_context=rfq_context,
+                intake_artifact=intake_artifact,
+                event_meta=event_meta,
+                commit=False,
+            )
+            snapshot_artifact = self.snapshot_service.rebuild_snapshot_for_rfq(
+                rfq_id=rfq_id,
+                source_event_meta=event_meta,
+                commit=False,
+            )
+
+            self.event_processing_service.mark_completed(event_id=event_meta["event_id"])
+        except Exception as exc:
+            self.event_processing_service.rollback_active_transaction()
+            self.event_processing_service.mark_failed(
+                event_id=event_meta["event_id"],
+                error_message=str(exc),
+            )
+            raise
 
         return {
             "status": "processed",

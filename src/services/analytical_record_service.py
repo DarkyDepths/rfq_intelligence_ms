@@ -20,7 +20,13 @@ class AnalyticalRecordService:
     def __init__(self, datasource: ArtifactDatasource):
         self.datasource = datasource
 
-    def build_initial_analytical_record(self, rfq_context: dict, intake_artifact, event_meta: dict):
+    def build_initial_analytical_record(
+        self,
+        rfq_context: dict,
+        intake_artifact,
+        event_meta: dict,
+        commit: bool = True,
+    ):
         """Seed a truthful, minimal analytical record from known intake context."""
         rfq_id = UUID(str(rfq_context["rfq_id"]))
         source_package_refs = rfq_context.get("source_package_refs", [])
@@ -72,6 +78,7 @@ class AnalyticalRecordService:
             source_event_type=event_meta["event_type"],
             source_event_id=event_meta["event_id"],
         )
-        self.datasource.db.commit()
-        self.datasource.db.refresh(artifact)
+        if commit:
+            self.datasource.db.commit()
+            self.datasource.db.refresh(artifact)
         return artifact

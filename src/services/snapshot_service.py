@@ -34,7 +34,12 @@ class SnapshotService:
     def __init__(self, datasource: ArtifactDatasource):
         self.datasource = datasource
 
-    def rebuild_snapshot_for_rfq(self, rfq_id: str, source_event_meta: dict):
+    def rebuild_snapshot_for_rfq(
+        self,
+        rfq_id: str,
+        source_event_meta: dict,
+        commit: bool = True,
+    ):
         """Build and persist current rfq_intelligence_snapshot for the first slice."""
         rfq_uuid = UUID(str(rfq_id))
         current_artifacts = self.datasource.list_current_artifacts_for_rfq(rfq_uuid)
@@ -120,8 +125,9 @@ class SnapshotService:
             source_event_type=source_event_meta["event_type"],
             source_event_id=source_event_meta["event_id"],
         )
-        self.datasource.db.commit()
-        self.datasource.db.refresh(artifact)
+        if commit:
+            self.datasource.db.commit()
+            self.datasource.db.refresh(artifact)
         return artifact
 
     async def refresh_snapshot(self, rfq_id: str) -> None:

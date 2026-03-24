@@ -43,7 +43,12 @@ class IntakeService:
         """Read minimal RFQ context through the manager connector boundary."""
         return await self.connector.get_rfq_context(rfq_id)
 
-    def build_intake_profile_from_rfq_created(self, rfq_context: dict, event_meta: dict):
+    def build_intake_profile_from_rfq_created(
+        self,
+        rfq_context: dict,
+        event_meta: dict,
+        commit: bool = True,
+    ):
         """Build and persist a minimal, honest rfq_intake_profile for the first slice."""
         rfq_id = UUID(str(rfq_context["rfq_id"]))
         source_package_refs = rfq_context.get("source_package_refs", [])
@@ -126,8 +131,9 @@ class IntakeService:
             source_event_type=event_meta["event_type"],
             source_event_id=event_meta["event_id"],
         )
-        self.datasource.db.commit()
-        self.datasource.db.refresh(artifact)
+        if commit:
+            self.datasource.db.commit()
+            self.datasource.db.refresh(artifact)
         return artifact
 
     async def process_intake(self, rfq_id: str, event_payload: dict) -> None:
