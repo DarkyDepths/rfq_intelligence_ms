@@ -16,23 +16,48 @@ _TEXT_ANCHORS: dict[str, list[tuple[str, str, bool]]] = {
         ("B2", "GENERAL INFORMATION", True),
         ("B4", "INQ #", True),
         ("B5", "CLIENT:", True),
+        ("B6", "CLIENT INQ.#", False),
         ("B7", "SUBJECT :", True),
+        ("B8", "PROJECT:", False),
         ("B11", "ITEM TAGS", True),
+        ("D11", "ITEM DESCRIPTION", False),
+        ("K11", "MATERIAL", False),
     ],
     "Bid S": [
         ("B2", "INQ #", True),
+        ("B3", "CLIENT:", False),
+        ("B4", "CLIENT INQ.#", False),
+        ("B5", "SUBJECT :", False),
+        ("B6", "PROJECT:", False),
         ("F2", "Direct MH :", True),
+        ("F3", "In-Direct MH :", False),
+        ("F4", "Exch.Rate", False),
+        ("F5", "Total Weight (Tons)", False),
+        ("F6", "Tentative PO Date", False),
         ("B9", "BID SUMMARY", True),
         ("B12", "Particulars", True),
         ("E12", "Amounts", True),
+        ("G12", "%Age", False),
+        ("H12", "Cost / Price Per Ton", False),
         ("B49", "GRAND TOTAL", True),
     ],
     "Top Sheet": [
         ("B2", "INQ #", True),
+        ("B3", "CLIENT:", False),
+        ("B4", "CLIENT INQ.#", False),
+        ("B5", "SUBJECT :", False),
+        ("B6", "PROJECT:", False),
+        ("B7", "Dated:", False),
         ("B9", "Description", True),
+        ("C9", "Budget", False),
+        ("D9", "%", False),
+        ("E10", "Rev-01", False),
         ("B11", "REVENUE", True),
         ("B19", "PROJECT DIRECT COST:", True),
         ("B62", "PROJECT INDIRECT COST:", True),
+        ("B71", "TOTAL PROJECT COST", False),
+        ("B72", "GROSS PROFIT", False),
+        ("B76", "PATAM", False),
     ],
 }
 
@@ -41,6 +66,15 @@ _NUMERIC_ANCHORS: dict[str, list[tuple[str, float, bool]]] = {
         ("G10", 1.0, False),
         ("H10", 2.0, False),
         ("I10", 3.0, False),
+        ("J10", 4.0, False),
+        ("K10", 5.0, False),
+        ("L10", 6.0, False),
+        ("M10", 7.0, False),
+        ("N10", 8.0, False),
+        ("O10", 9.0, False),
+        ("P10", 10.0, False),
+        ("Q10", 11.0, False),
+        ("R10", 12.0, False),
     ]
 }
 
@@ -147,6 +181,25 @@ class TemplateMatcher:
                     )
                 if hard_fail and not passed:
                     has_hard_fail = True
+
+        if self._reader.has_sheet("General"):
+            inquiry_no = self._reader.get_label_value("General", 4, 4)
+            if inquiry_no is None:
+                has_hard_fail = True
+                issues.append(
+                    ParserIssue(
+                        code="GENERAL_MISSING_REQUIRED_FIELD",
+                        severity="error",
+                        sheet_name="General",
+                        cell_ref="D4",
+                        row_number=4,
+                        field_path="workbook_profile.rfq_identity.inquiry_no",
+                        message="Required inquiry number cell is blank",
+                        expected_value="non-empty",
+                        actual_value=None,
+                        raw_value=None,
+                    )
+                )
 
         return TemplateMatchResult(
             template_name="ghi_estimation_workbook_v1",

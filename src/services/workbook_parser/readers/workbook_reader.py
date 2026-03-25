@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import date
 
 
 class WorkbookReader(ABC):
@@ -32,8 +31,8 @@ class WorkbookReader(ABC):
         """Return raw numeric value from exact cell without merge backfill."""
 
     @abstractmethod
-    def get_date_value(self, sheet_name: str, row: int, col: int) -> date | None:
-        """Return date value using workbook datemode when cell is date-like."""
+    def get_date_value(self, sheet_name: str, row: int, col: int) -> str | None:
+        """Return ISO date string (YYYY-MM-DD) using workbook datemode when cell is date-like."""
 
     @abstractmethod
     def get_merged_regions_count(self, sheet_name: str) -> int:
