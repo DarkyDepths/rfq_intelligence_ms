@@ -39,10 +39,13 @@ class WorkbookParserOrchestrator:
             },
             bid_s_data={
                 "identity_mirror": bid_s_result.identity_mirror,
+                "bid_meta": bid_s_result.bid_meta,
+                "bid_summary_lines": bid_s_result.bid_summary_lines,
                 "bid_summary": bid_s_result.bid_summary,
             },
             top_sheet_data={
                 "identity_mirror": top_sheet_result.identity_mirror,
+                "top_sheet_lines": top_sheet_result.top_sheet_lines,
                 "top_sheet_summary": top_sheet_result.top_sheet_summary,
             },
         )
