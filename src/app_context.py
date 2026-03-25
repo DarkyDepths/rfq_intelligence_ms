@@ -41,6 +41,7 @@ from src.translators.artifact_translator import ArtifactTranslator
 # ── Controllers ───────────────────────────────────────
 from src.controllers.intelligence_controller import IntelligenceController
 from src.controllers.reprocess_controller import ReprocessController
+from src.controllers.workbook_parse_controller import WorkbookParseController
 
 # ── Services ──────────────────────────────────────────
 from src.services.artifact_read_service import ArtifactReadService
@@ -52,6 +53,7 @@ from src.services.analytical_record_service import AnalyticalRecordService
 from src.services.review_service import ReviewService
 from src.event_handlers.lifecycle_handlers import LifecycleHandlers
 from src.services.event_processing_service import EventProcessingService
+from src.services.workbook_parser.parser_orchestrator import WorkbookParserOrchestrator
 
 
 # ═══════════════════════════════════════════════════════
@@ -175,3 +177,13 @@ def get_reprocess_controller(
         intake_service=intake_service,
         workbook_service=workbook_service,
     )
+
+
+def get_workbook_parser_orchestrator() -> WorkbookParserOrchestrator:
+    return WorkbookParserOrchestrator()
+
+
+def get_workbook_parse_controller(
+    orchestrator: WorkbookParserOrchestrator = Depends(get_workbook_parser_orchestrator),
+) -> WorkbookParseController:
+    return WorkbookParseController(orchestrator=orchestrator)

@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workbook Parser — Implementation Pack v1.1 (Patched)</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #1c2129;
+    --border: #30363d;
+    --border-light: #21262d;
+    --ink: #e6edf3;
+    --ink-2: #c9d1d9;
+    --ink-3: #8b949e;
+    --ink-4: #6e7681;
+    --blue: #58a6ff;
+    --blue-dim: #1f6feb33;
+    --green: #3fb950;
+    --green-dim: #23863533;
+    --amber: #d29922;
+    --amber-dim: #d2992233;
+    --red: #f85149;
+    --red-dim: #f8514933;
+    --purple: #bc8cff;
+    --purple-dim: #bc8cff22;
+    --cyan: #39d2c0;
+    --cyan-dim: #39d2c022;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink-2);
+    font-size: 14.5px;
+    line-height: 1.65;
+  }
+
+  /* === LAYOUT === */
+  .wrapper { max-width: 1020px; margin: 0 auto; padding: 40px 28px 100px; }
+
+  /* === NAV === */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 28px;
+    margin: 0 -28px 40px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  nav a {
+    color: var(--ink-3);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    margin-right: 18px;
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  nav a:hover { color: var(--blue); border-bottom-color: var(--blue); }
+
+  /* === TYPOGRAPHY === */
+  h1 {
+    font-size: 28px; font-weight: 700; color: var(--ink);
+    margin-bottom: 6px; letter-spacing: -0.5px;
+  }
+  .subtitle { color: var(--ink-3); font-size: 14px; margin-bottom: 36px; }
+  .subtitle code { background: var(--surface-2); padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--amber); }
+  h2 {
+    font-size: 20px; font-weight: 600; color: var(--ink);
+    margin: 48px 0 8px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  h2 .sn { color: var(--ink-4); font-weight: 400; margin-right: 8px; font-size: 14px; }
+  h3 { font-size: 15px; font-weight: 600; color: var(--ink); margin: 28px 0 10px; }
+  h4 { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 20px 0 8px; }
+  p { margin-bottom: 12px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+    font-size: 12.5px;
+    background: var(--surface-2);
+    padding: 1.5px 5px;
+    border-radius: 3px;
+    color: var(--cyan);
+  }
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    margin: 12px 0 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+
+  /* === TABLES === */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 13px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+  }
+  th {
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  td { color: var(--ink-2); }
+  td code { font-size: 11.5px; }
+  tr:nth-child(even) td { background: var(--surface-2); }
+  .col-type { color: var(--purple); font-family: 'JetBrains Mono', monospace; font-size: 11.5px; }
+  .col-owner { color: var(--green); font-weight: 600; font-size: 12px; }
+  .col-cell { color: var(--amber); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* === CALLOUTS === */
+  .callout {
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    border-left: 3px solid;
+  }
+  .callout-blue { background: var(--blue-dim); border-color: var(--blue); }
+  .callout-green { background: var(--green-dim); border-color: var(--green); }
+  .callout-amber { background: var(--amber-dim); border-color: var(--amber); }
+  .callout-red { background: var(--red-dim); border-color: var(--red); }
+  .callout-purple { background: var(--purple-dim); border-color: var(--purple); }
+  .callout .callout-title { font-weight: 600; color: var(--ink); margin-bottom: 4px; font-size: 13px; }
+
+  /* === TAGS === */
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.2px;
+  }
+  .tag-blue { background: var(--blue-dim); color: var(--blue); }
+  .tag-green { background: var(--green-dim); color: var(--green); }
+  .tag-amber { background: var(--amber-dim); color: var(--amber); }
+  .tag-red { background: var(--red-dim); color: var(--red); }
+  .tag-purple { background: var(--purple-dim); color: var(--purple); }
+
+  /* === PATCH MARKER === */
+  .patched {
+    border-left: 3px solid var(--green);
+    padding-left: 12px;
+    margin-left: -15px;
+  }
+  .patch-label {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--green);
+    background: var(--green-dim);
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  /* === SECTION DIVIDER === */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 48px 0;
+  }
+
+  /* === GRID === */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 12px 0; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card-title { font-weight: 600; color: var(--ink); font-size: 13px; margin-bottom: 6px; }
+  .card-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--cyan); }
+
+  /* === INTERFACE BLOCK === */
+  .iface {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+  .iface-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--blue);
+    margin-bottom: 12px;
+  }
+
+  ul { margin: 8px 0 12px 20px; }
+  li { margin-bottom: 4px; }
+
+  .toc { margin: 20px 0 40px; }
+  .toc a { display: block; color: var(--ink-3); text-decoration: none; font-size: 13px; padding: 3px 0; }
+  .toc a:hover { color: var(--blue); }
+  .toc .toc-sub { padding-left: 20px; font-size: 12px; }
+
+  @media (max-width: 768px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    nav { padding: 8px 16px; }
+    .wrapper { padding: 20px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<nav>
+  <a href="#s1">Overview</a>
+  <a href="#s2">Decisions</a>
+  <a href="#s3">General</a>
+  <a href="#s4">BidS</a>
+  <a href="#s5">TopSheet</a>
+  <a href="#s6">Schema</a>
+  <a href="#s7">Ownership</a>
+  <a href="#s8">CanonicalKeys</a>
+  <a href="#s9">Normalization</a>
+  <a href="#s10">Retention</a>
+  <a href="#s11">CrossChecks</a>
+  <a href="#s12">Diagnostics</a>
+  <a href="#s13">JSON</a>
+</nav>
+
+<!-- ============================================================ -->
+<!-- TITLE -->
+<!-- ============================================================ -->
+<h1>Workbook Parser — Implementation Pack v1.1</h1>
+<p class="subtitle">
+  Source of truth for the first 3 sheets: <strong>General</strong>, <strong>Bid S</strong>, <strong>Top Sheet</strong><br>
+  Reference workbook: <code>IF-25144.xls</code> &nbsp;|&nbsp; 32 sheets &nbsp;|&nbsp; .xls (BIFF) format<br>
+  Schema frozen: 2026-03-25 &nbsp;|&nbsp; Includes v1.1 patches (line_kind, rev00 rename, cross-check fixes)
+</p>
+
+<div class="callout callout-blue">
+  <div class="callout-title">What this document is</div>
+  This is the single authoritative reference for implementing the GHI estimation workbook parser inside <code>rfq_intelligence_ms</code>. It contains the parser contract, all three sheet extraction maps, the frozen typed schema (with v1.1 patches applied), all normalization rules, canonical key tables, cross-check definitions, and the full JSON skeleton. Nothing needed for implementation should exist outside this document.
+</div>
+
+<div class="callout callout-amber">
+  <div class="callout-title">What this document is NOT</div>
+  This is not code. This is not the implementation blueprint (folder structure, module interfaces, adapter patterns). That is Step 8, which comes after this contract is frozen. This document defines <strong>what</strong> the parser must produce. Step 8 defines <strong>how</strong> it is built.
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 1: OVERVIEW & SCOPE -->
+<!-- ============================================================ -->
+<h2 id="s1"><span class="sn">01</span> Overview &amp; Scope</h2>
+
+<h3>1.1 Goal</h3>
+<p>When a workbook is uploaded (<code>workbook.uploaded</code> event), the service must: open the <code>.xls</code> file, verify it matches the known GHI template, read the needed sheets deterministically, produce clean structured JSON, save parser warnings separately, and update the intelligence snapshot.</p>
+
+<div class="callout callout-red">
+  <div class="callout-title">Hard rule</div>
+  Excel parsing is deterministic. LLM is <strong>not</strong> used to read workbook cells. LLM can be used later only to explain or summarize extracted results.
+</div>
+
+<h3>1.2 Trigger</h3>
+<table>
+  <tr><th>Field</th><th>Value</th></tr>
+  <tr><td>Event</td><td><code>workbook.uploaded</code></td></tr>
+  <tr><td>Input</td><td><code>rfq_id</code>, <code>workbook_file_id</code> or blob path, original filename, upload timestamp</td></tr>
+  <tr><td>V1 file type</td><td><code>.xls</code> (BIFF format, parsed via <code>xlrd</code>)</td></tr>
+  <tr><td>Future-friendly</td><td><code>.xlsx</code> via <code>openpyxl</code> — not required now, but parser should use a <code>WorkbookReader</code> adapter</td></tr>
+</table>
+
+<h3>1.3 Parser promise — 3 outputs</h3>
+<div class="grid-3">
+  <div class="card">
+    <div class="card-title">A. workbook_profile</div>
+    The clean business view: RFQ identity, item table, bid metadata, commercial summaries.
+  </div>
+  <div class="card">
+    <div class="card-title">B. cost_breakdown_profile</div>
+    The structured cost side: bid summary lines, top sheet lines, promoted summary metrics.
+  </div>
+  <div class="card">
+    <div class="card-title">C. parser_report</div>
+    The technical truth: anchor checks, cross-checks, warnings, errors, per-sheet reports.
+  </div>
+</div>
+
+<h3>1.4 Scope — what this schema covers</h3>
+<table>
+  <tr><th>Included in v1.1</th><th>NOT included yet</th></tr>
+  <tr>
+    <td>
+      Canonical RFQ identity (General-owned)<br>
+      Identity mirrors (Bid S, Top Sheet)<br>
+      General item extraction<br>
+      Bid S metadata + bid summary table<br>
+      Top Sheet commercial table<br>
+      Promoted summary fields<br>
+      Parser diagnostics, anchors, cross-checks<br>
+      Sheet-level observability
+    </td>
+    <td>
+      Cash Flow, B-O-Q, Mat Break-up, Material Csot Summary, Price Sheet, Bid Appr<br>
+      Lower General component table (rows 76+)<br>
+      P2/P3 similarity enrichments<br>
+      LLM-based explanation or summarization<br>
+      Folder/module implementation blueprint (Step 8)
+    </td>
+  </tr>
+</table>
+
+<h3>1.5 V1 sheet groups</h3>
+<table>
+  <tr><th>Group</th><th>Sheets</th><th>Status</th></tr>
+  <tr>
+    <td><span class="tag tag-green">Group 1 — Parse now</span></td>
+    <td>General, Bid S, Top Sheet</td>
+    <td>Covered in this document</td>
+  </tr>
+  <tr>
+    <td><span class="tag tag-amber">Group 1b — Parse next</span></td>
+    <td>Cash Flow, Bid Appr, Price Sheet, Mat Break-up, Material Csot Summary, B-O-Q</td>
+    <td>Contract defined, extraction maps pending</td>
+  </tr>
+  <tr>
+    <td><span class="tag tag-purple">Group 2 — Later</span></td>
+    <td>Weight Sheet, Sch, Dir_Lab Cost, Dir_Lab_Hire_Cost, Indir_Mhr Cost, Fab_Mhr Cost, Design_Mhr_Cost, Cons_Break-up, Cons_Cost Summary, G_Paint_Pas'n Break-up, G_Paint_Pass'n Summary, N-D-T, NDT Cost Summary, PWHT Break-up, PWHT-Cost, Hyd-Water Cost, ASME_NB_FEA &amp; BT Cost, Int' Pro'n &amp; HM &amp; Helium, Int'l Prt'n_HM &amp; Helium C Sum, Transportation Cost, Financial Charges, KOM Cost Break-up, KOM_AGENT_CONT'Y, INS'S_FC_BU OVH'D, Shop Load</td>
+    <td>Deferred</td>
+  </tr>
+  <tr>
+    <td><span class="tag tag-red">Group 3 — Ignore</span></td>
+    <td>Sheet1, Sheet2</td>
+    <td>Empty sheets</td>
+  </tr>
+</table>
+
+<h3>1.6 Hard fail vs. soft warning vs. no silent failure</h3>
+<table>
+  <tr><th>Category</th><th>Conditions</th><th>Behavior</th></tr>
+  <tr>
+    <td><span class="tag tag-red">Hard fail</span></td>
+    <td>File cannot be opened; not <code>.xls</code>; required core sheets missing; core identity anchors missing; template clearly does not match</td>
+    <td>Entire parsing run fails. <code>status = "failed"</code>.</td>
+  </tr>
+  <tr>
+    <td><span class="tag tag-amber">Soft warning</span></td>
+    <td>Optional sheets missing; blank cells; formulas resolving to empty; weird rows; Excel error cells; hidden sheets; totals that don't reconcile exactly</td>
+    <td>Parsing succeeds. <code>status = "parsed_with_warnings"</code>. Warning recorded.</td>
+  </tr>
+  <tr>
+    <td><span class="tag tag-green">No silent failure</span></td>
+    <td colspan="2">If something is strange, we record it. We do not hide it.</td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 2: FROZEN DESIGN DECISIONS -->
+<!-- ============================================================ -->
+<h2 id="s2"><span class="sn">02</span> Frozen Design Decisions</h2>
+
+<table>
+  <tr><th>Decision</th><th>Rule</th></tr>
+  <tr><td><strong>Source-of-truth ownership</strong></td><td>General owns primary RFQ identity. Bid S owns bid_meta and bid_summary_lines. Top Sheet owns top_sheet_lines and top_sheet_summary.</td></tr>
+  <tr><td><strong>Mirrors preserved</strong></td><td>Identity repeated in Bid S and Top Sheet is kept as mirror data, not discarded.</td></tr>
+  <tr><td><strong>Deterministic parsing only</strong></td><td>No LLM is used to parse workbook cells.</td></tr>
+  <tr><td><strong>Nullable business schema</strong></td><td>Even required business fields are typed as nullable. Required-ness is enforced by parser warnings and hard fail rules, not by making the JSON impossible to serialize.</td></tr>
+  <tr><td><strong>Dates</strong></td><td>All business dates: <code>YYYY-MM-DD</code> (ISO).</td></tr>
+  <tr><td><strong>Ratios</strong></td><td>All percent-like values stored as raw ratios. <code>0.23</code> means 23%. UI can multiply by 100 if needed.</td></tr>
+  <tr><td><strong>Zero vs null</strong></td><td><code>0</code> = explicit zero. <code>null</code> = missing / unavailable / not populated.</td></tr>
+  <tr><td><strong>Computed totals over cell totals</strong></td><td>Summary figures (e.g., General item totals) are computed from kept rows, not read from potentially-broken Excel summary cells.</td></tr>
+  <tr><td><strong>WorkbookReader adapter</strong></td><td>Parser must use a thin abstraction (e.g., <code>get_cell(sheet, row, col)</code>) so switching from <code>xlrd</code> to <code>openpyxl</code> later doesn't rewrite the whole thing.</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 3: GENERAL SHEET EXTRACTION MAP -->
+<!-- ============================================================ -->
+<h2 id="s3"><span class="sn">03</span> General Sheet — Extraction Map</h2>
+
+<h3>3.1 What General owns in V1</h3>
+<table>
+  <tr><th>Component</th><th>Status</th></tr>
+  <tr><td><strong>A. RFQ identity block</strong> — top metadata area</td><td><span class="tag tag-green">V1</span></td></tr>
+  <tr><td><strong>B. Main item table</strong> — rows 14:62</td><td><span class="tag tag-green">V1</span></td></tr>
+  <tr><td><strong>C. Lower component/fabrication table</strong> — rows 76+</td><td><span class="tag tag-purple">Deferred</span> — different business structure, deserves own sub-extractor</td></tr>
+</table>
+
+<h3>3.2 Required anchors</h3>
+<div class="callout callout-amber">
+  <div class="callout-title">Anchor normalization rule</div>
+  Before comparing: trim, replace newlines/tabs with spaces, collapse repeated spaces to one. This is critical — B11 contains <code>"ITEM\nTAGS"</code> (literal newline), D11 contains <code>"ITEM \nDESCRIPTION"</code>.
+</div>
+
+<table>
+  <tr><th>Cell</th><th>Expected (normalized)</th><th>Hard fail?</th></tr>
+  <tr><td class="col-cell">B2</td><td>GENERAL INFORMATION</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">B4</td><td>INQ #</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">B5</td><td>CLIENT:</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">B6</td><td>CLIENT INQ.#</td><td></td></tr>
+  <tr><td class="col-cell">B7</td><td>SUBJECT :</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">B8</td><td>PROJECT:</td><td></td></tr>
+  <tr><td class="col-cell">B11</td><td>ITEM TAGS</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">D11</td><td>ITEM DESCRIPTION</td><td></td></tr>
+  <tr><td class="col-cell">K11</td><td>MATERIAL</td><td></td></tr>
+</table>
+<p>Additional hard rule: <code>D4</code> must not be blank.</p>
+
+<h3>3.3 Identity block extraction map</h3>
+<table>
+  <tr><th>Output field</th><th>Type</th><th>Source</th><th>Rule</th></tr>
+  <tr><td><code>rfq_identity.inquiry_no</code></td><td class="col-type">string | null</td><td class="col-cell">D4</td><td>trim text — <strong>required</strong></td></tr>
+  <tr><td><code>rfq_identity.revision_no</code></td><td class="col-type">string | null</td><td class="col-cell">H4</td><td>if numeric like 0.0, normalize to integer string "0"</td></tr>
+  <tr><td><code>rfq_identity.client_name</code></td><td class="col-type">string | null</td><td class="col-cell">D5</td><td>trim text — <strong>required</strong></td></tr>
+  <tr><td><code>rfq_identity.status</code></td><td class="col-type">string | null</td><td class="col-cell">H5</td><td>trim text</td></tr>
+  <tr><td><code>rfq_identity.client_inquiry_no</code></td><td class="col-type">string | null</td><td class="col-cell">D6</td><td>trim text</td></tr>
+  <tr><td><code>rfq_identity.subject</code></td><td class="col-type">string | null</td><td class="col-cell">D7</td><td>trim text — <strong>required</strong></td></tr>
+  <tr><td><code>rfq_identity.project_name</code></td><td class="col-type">string | null</td><td class="col-cell">D8</td><td>trim text — <strong>required</strong></td></tr>
+  <tr><td><code>rfq_identity.inquiry_date</code></td><td class="col-type">IsoDateString | null</td><td class="col-cell">D9</td><td><code>xlrd.xldate_as_tuple(value, workbook.datemode)</code> → YYYY-MM-DD</td></tr>
+</table>
+
+<h3>3.4 Main item table</h3>
+
+<h4>Boundaries</h4>
+<table>
+  <tr><th>Area</th><th>Rows</th><th>Notes</th></tr>
+  <tr><td>Header</td><td>11 (top), 12 (sub)</td><td>Merged vertically: A11:A12, B11:B12, etc.</td></tr>
+  <tr><td>Body</td><td>14 : 62</td><td>Many rows are template placeholders — filter required</td></tr>
+  <tr><td>Summary</td><td>64</td><td>Do NOT trust — compute totals from kept rows instead</td></tr>
+</table>
+
+<h4>Column map</h4>
+<table>
+  <tr><th>Output field</th><th>Type</th><th>Col</th><th>Notes</th></tr>
+  <tr><td><code>sr_no</code></td><td class="col-type">integer | null</td><td class="col-cell">A</td><td></td></tr>
+  <tr><td><code>item_tag</code></td><td class="col-type">string | null</td><td class="col-cell">B</td><td></td></tr>
+  <tr><td><code>item_revision</code></td><td class="col-type">string | null</td><td class="col-cell">C</td><td>Normalize: 0.0 → "0"</td></tr>
+  <tr><td><code>item_description</code></td><td class="col-type">string | null</td><td class="col-cell">D</td><td></td></tr>
+  <tr><td><code>qty</code></td><td class="col-type">number | null</td><td class="col-cell">E</td><td></td></tr>
+  <tr><td><code>diameter</code></td><td class="col-type">number | null</td><td class="col-cell">F</td><td></td></tr>
+  <tr><td><code>length</code></td><td class="col-type">number | null</td><td class="col-cell">G</td><td></td></tr>
+  <tr><td><code>thickness</code></td><td class="col-type">number | null</td><td class="col-cell">H</td><td></td></tr>
+  <tr><td><code>unit_weight_ton</code></td><td class="col-type">number | null</td><td class="col-cell">I</td><td></td></tr>
+  <tr><td><code>total_weight_ton</code></td><td class="col-type">number | null</td><td class="col-cell">J</td><td></td></tr>
+  <tr><td><code>material</code></td><td class="col-type">string | null</td><td class="col-cell">K</td><td></td></tr>
+  <tr><td><code>item_type</code></td><td class="col-type">string | null</td><td class="col-cell">L</td><td>H = horizontal, V = vertical</td></tr>
+  <tr><td><code>rt_level</code></td><td class="col-type">string | null</td><td class="col-cell">M</td><td>Full / Spot</td></tr>
+  <tr><td><code>rt_source</code></td><td class="col-type">string | null</td><td class="col-cell">N</td><td>e.g., Ir192</td></tr>
+  <tr><td><code>pwht</code></td><td class="col-type">boolean | null</td><td class="col-cell">O</td><td>Yes→true, No→false, blank→null</td></tr>
+  <tr><td><code>asme_stamp</code></td><td class="col-type">boolean | null</td><td class="col-cell">P</td><td>Same normalization</td></tr>
+  <tr><td><code>nb_regn_cost_flag</code></td><td class="col-type">boolean | null</td><td class="col-cell">Q</td><td></td></tr>
+  <tr><td><code>fea_cost_flag</code></td><td class="col-type">boolean | null</td><td class="col-cell">R</td><td></td></tr>
+  <tr><td><code>bolts_tensioner_cost_flag</code></td><td class="col-type">boolean | null</td><td class="col-cell">S</td><td></td></tr>
+  <tr><td><code>material_freight_cost_flag</code></td><td class="col-type">boolean | null</td><td class="col-cell">T</td><td></td></tr>
+  <tr><td><code>helium_leak_test_cost_flag</code></td><td class="col-type">boolean | null</td><td class="col-cell">U</td><td></td></tr>
+  <tr><td><code>kom_flag</code></td><td class="col-type">boolean | null</td><td class="col-cell">V</td><td></td></tr>
+</table>
+
+<h4>Row inclusion rule</h4>
+<div class="callout callout-green">
+  <div class="callout-title">Keep the row if at least one is true</div>
+  <code>item_tag</code> is meaningful (not blank, not exactly <code>"E"</code>)<br>
+  <code>item_description</code> is meaningful (not blank, not exactly <code>"XXXX"</code>)<br>
+  <code>qty &gt; 0</code><br>
+  <code>total_weight_ton &gt; 0</code>
+</div>
+<div class="callout callout-red">
+  <div class="callout-title">Drop the row if ALL are true</div>
+  <code>item_tag == "E"</code> (template default single-character placeholder)<br>
+  <code>item_description == "XXXX"</code><br>
+  <code>qty == 0 or null</code><br>
+  <code>unit_weight_ton == 0 or null</code><br>
+  <code>total_weight_ton == 0 or null</code>
+</div>
+
+<h4>Verified against IF-25144.xls</h4>
+<div class="grid-3">
+  <div class="card"><div class="card-title">Real rows</div><div class="card-val">1</div></div>
+  <div class="card"><div class="card-title">Placeholder rows</div><div class="card-val">48</div></div>
+  <div class="card"><div class="card-title">Merged regions</div><div class="card-val">24</div></div>
+</div>
+<p>The single real row: Row 14 — tag <code>K18-D-0003</code>, description <code>DRAIN COLLECTION VESSEL</code>, qty=1, total_weight=10.249 tons, material <code>SA 516 Gr. 70N</code>.</p>
+
+<h3>3.5 General summary (computed, not from cells)</h3>
+<table>
+  <tr><th>Field</th><th>Formula</th></tr>
+  <tr><td><code>general_summary.item_count</code></td><td><code>len(kept_rows)</code></td></tr>
+  <tr><td><code>general_summary.total_qty</code></td><td><code>sum(row.qty for row in kept_rows)</code></td></tr>
+  <tr><td><code>general_summary.total_weight_ton</code></td><td><code>sum(row.total_weight_ton for row in kept_rows)</code></td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 4: BID S EXTRACTION MAP -->
+<!-- ============================================================ -->
+<h2 id="s4"><span class="sn">04</span> Bid S Sheet — Extraction Map</h2>
+
+<h3>4.1 What Bid S owns in V1</h3>
+<p><strong>A.</strong> Commercial identity mirror (cross-check against General). <strong>B.</strong> Fixed bid metadata (MH, exchange rate, weight, PO date, delivery). <strong>C.</strong> Bid summary table (the main cost structure). <strong>D.</strong> Key rolled-up totals.</p>
+
+<div class="callout callout-amber">
+  <div class="callout-title">Merged cells — this sheet has 50 merged regions</div>
+  Column B is merged across B:D for most rows (labels span full width). <code>basis_factor</code> lives in D only for rows where B:C is merged instead of B:D. Column A is vertically merged across line-item groups (e.g., "2-" spans rows 15:17). Read the top-left cell of each merge region.
+</div>
+
+<h3>4.2 Required anchors</h3>
+<table>
+  <tr><th>Cell</th><th>Expected (normalized)</th><th>Hard fail?</th></tr>
+  <tr><td class="col-cell">B2</td><td>INQ #</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">B3</td><td>CLIENT:</td><td></td></tr>
+  <tr><td class="col-cell">B4</td><td>CLIENT INQ.#</td><td></td></tr>
+  <tr><td class="col-cell">B5</td><td>SUBJECT :</td><td></td></tr>
+  <tr><td class="col-cell">B6</td><td>PROJECT:</td><td></td></tr>
+  <tr><td class="col-cell">F2</td><td>Direct MH :</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">F3</td><td>In-Direct MH :</td><td></td></tr>
+  <tr><td class="col-cell">F4</td><td>Exch.Rate</td><td></td></tr>
+  <tr><td class="col-cell">F5</td><td>Total Weight (Tons)</td><td></td></tr>
+  <tr><td class="col-cell">F6</td><td>Tentative PO Date</td><td></td></tr>
+  <tr><td class="col-cell">B9</td><td>BID SUMMARY</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">B12</td><td>Particulars</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">E12</td><td>Amounts</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">G12</td><td>%Age</td><td></td></tr>
+  <tr><td class="col-cell">H12</td><td>Cost / Price Per Ton</td><td></td></tr>
+  <tr><td class="col-cell">B49</td><td>GRAND TOTAL</td><td><span class="tag tag-red">Yes</span></td></tr>
+</table>
+
+<h3>4.3 Identity mirror extraction</h3>
+<table>
+  <tr><th>Output field</th><th>Type</th><th>Source</th></tr>
+  <tr><td><code>identity_mirrors.bid_s.inquiry_no</code></td><td class="col-type">string | null</td><td class="col-cell">C2</td></tr>
+  <tr><td><code>identity_mirrors.bid_s.client_name</code></td><td class="col-type">string | null</td><td class="col-cell">C3</td></tr>
+  <tr><td><code>identity_mirrors.bid_s.client_inquiry_no</code></td><td class="col-type">string | null</td><td class="col-cell">C4</td></tr>
+  <tr><td><code>identity_mirrors.bid_s.subject</code></td><td class="col-type">string | null</td><td class="col-cell">C5</td></tr>
+  <tr><td><code>identity_mirrors.bid_s.project_name</code></td><td class="col-type">string | null</td><td class="col-cell">C6</td></tr>
+</table>
+
+<h3>4.4 Bid metadata extraction</h3>
+<table>
+  <tr><th>Output field</th><th>Type</th><th>Source</th><th>Rule</th></tr>
+  <tr><td><code>bid_meta.direct_mh</code></td><td class="col-type">number | null</td><td class="col-cell">G2</td><td>numeric</td></tr>
+  <tr><td><code>bid_meta.indirect_mh</code></td><td class="col-type">number | null</td><td class="col-cell">G3</td><td>numeric</td></tr>
+  <tr><td><code>bid_meta.exchange_rate</code></td><td class="col-type">number | null</td><td class="col-cell">G4</td><td>numeric</td></tr>
+  <tr><td><code>bid_meta.total_weight_ton</code></td><td class="col-type">number | null</td><td class="col-cell">G5</td><td>numeric</td></tr>
+  <tr><td><code>bid_meta.tentative_po_date</code></td><td class="col-type">IsoDateString | null</td><td class="col-cell">G6</td><td>Excel date → ISO</td></tr>
+  <tr><td><code>bid_meta.delivery_text</code></td><td class="col-type">string | null</td><td class="col-cell">G7</td><td>trim</td></tr>
+  <tr><td><code>bid_meta.dated</code></td><td class="col-type">IsoDateString | null</td><td class="col-cell">I8</td><td>Excel date → ISO</td></tr>
+  <tr><td><code>bid_meta.status</code></td><td class="col-type">string | null</td><td class="col-cell">B10</td><td>trim</td></tr>
+</table>
+
+<h3>4.5 Bid summary table</h3>
+<h4>Boundaries</h4>
+<p>Header: row 12 (labels), row 13 (currency subheaders: E13="SR", F13="US $", H13="SAR", I13="US $"). Body: rows 14:49. Skip: row 36 (section header "Other Overheads"), row 50 (footer declaration).</p>
+
+<h4>Column map</h4>
+<table>
+  <tr><th>Output field</th><th>Type</th><th>Col</th></tr>
+  <tr><td><code>row_no_label</code></td><td class="col-type">string | null</td><td class="col-cell">A</td></tr>
+  <tr><td><code>particular_raw</code></td><td class="col-type">string | null</td><td class="col-cell">B</td></tr>
+  <tr><td><code>basis_factor</code></td><td class="col-type">number | null</td><td class="col-cell">D</td></tr>
+  <tr><td><code>amount_sar</code></td><td class="col-type">number | null</td><td class="col-cell">E</td></tr>
+  <tr><td><code>amount_usd</code></td><td class="col-type">number | null</td><td class="col-cell">F</td></tr>
+  <tr><td><code>share_ratio</code></td><td class="col-type">number | null</td><td class="col-cell">G</td></tr>
+  <tr><td><code>per_ton_sar</code></td><td class="col-type">number | null</td><td class="col-cell">H</td></tr>
+  <tr><td><code>per_ton_usd</code></td><td class="col-type">number | null</td><td class="col-cell">I</td></tr>
+</table>
+
+<h4>Section classification</h4>
+<table>
+  <tr><th>Section</th><th>Rows</th><th>Examples</th></tr>
+  <tr><td><code>direct_cost</code></td><td>14 : 35</td><td>Material, Direct Manhours, NDT, Transport, Total Direct Cost (A)</td></tr>
+  <tr><td><code>other_overheads</code></td><td>37 : 43</td><td>Contingency, Insurance, Financial Charges, BU Overheads, Total Other Overheads</td></tr>
+  <tr><td><code>pricing_final</code></td><td>44 : 49</td><td>Total Gross Cost (B), Gross Margin, Gross Price, GRAND TOTAL</td></tr>
+</table>
+
+<div class="patched">
+<h4>Line kind classification <span class="patch-label">v1.1 patch</span></h4>
+<table>
+  <tr><th><code>line_kind</code></th><th>Canonical keys</th></tr>
+  <tr><td><code>"summary"</code></td><td><code>total_direct_cost</code>, <code>total_other_overheads</code>, <code>total_gross_cost</code>, <code>gross_price</code>, <code>grand_total</code></td></tr>
+  <tr><td><code>"detail"</code></td><td>Everything else, including <code>gross_margin</code>, <code>escalation_on_material</code>, <code>negotiation</code></td></tr>
+</table>
+<p>Rule: <code>summary</code> = rows that aggregate other rows (subtotals and totals). <code>detail</code> = everything else, including adjustment/calculation lines.</p>
+</div>
+
+<h4>Row inclusion &amp; special handling</h4>
+<p>Keep row if <code>particular</code> is present, including zero-value real business categories (PWHT, FEA Analysis, etc.). Skip: row 36 (section header), row 50 (footer), blank rows.</p>
+
+<h4>Boolean quirk</h4>
+<p>Cell <code>E38</code> ("Kick of meeting") is type BOOLEAN with value 0 — the only boolean cell in the table. Normalize: <code>bool false → 0</code>.</p>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 5: TOP SHEET EXTRACTION MAP -->
+<!-- ============================================================ -->
+<h2 id="s5"><span class="sn">05</span> Top Sheet — Extraction Map</h2>
+
+<h3>5.1 What Top Sheet owns in V1</h3>
+<p><strong>A.</strong> Identity mirror. <strong>B.</strong> Commercial line table (revenue, direct cost, indirect cost, profit). <strong>C.</strong> Revision/scenario columns. <strong>D.</strong> Rolled-up commercial totals.</p>
+
+<p>Merged cells: 7 regions — identity values in rows 2:7 across C:H, and Description header merged vertically in B9:B10. The table body itself is not merge-heavy.</p>
+
+<h3>5.2 Required anchors</h3>
+<table>
+  <tr><th>Cell</th><th>Expected (normalized)</th><th>Hard fail?</th></tr>
+  <tr><td class="col-cell">B2</td><td>INQ #</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">B3</td><td>CLIENT:</td><td></td></tr>
+  <tr><td class="col-cell">B4</td><td>CLIENT INQ.#</td><td></td></tr>
+  <tr><td class="col-cell">B5</td><td>SUBJECT :</td><td></td></tr>
+  <tr><td class="col-cell">B6</td><td>PROJECT:</td><td></td></tr>
+  <tr><td class="col-cell">B7</td><td>Dated:</td><td></td></tr>
+  <tr><td class="col-cell">B9</td><td>Description</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">C9</td><td>Budget</td><td></td></tr>
+  <tr><td class="col-cell">D9</td><td>%</td><td></td></tr>
+  <tr><td class="col-cell">E10</td><td>Rev-01</td><td></td></tr>
+  <tr><td class="col-cell">B11</td><td>REVENUE</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">B19</td><td>PROJECT DIRECT COST:</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">B62</td><td>PROJECT INDIRECT COST:</td><td><span class="tag tag-red">Yes</span></td></tr>
+  <tr><td class="col-cell">B71</td><td>TOTAL PROJECT COST</td><td></td></tr>
+  <tr><td class="col-cell">B72</td><td>GROSS PROFIT</td><td></td></tr>
+  <tr><td class="col-cell">B76</td><td>PATAM</td><td></td></tr>
+</table>
+<p>For numeric-type header cells (G10=1.0, H10=2.0, etc.), compare the numeric value, not string representation.</p>
+
+<h3>5.3 Identity mirror extraction</h3>
+<table>
+  <tr><th>Output field</th><th>Type</th><th>Source</th></tr>
+  <tr><td><code>identity_mirrors.top_sheet.inquiry_no</code></td><td class="col-type">string | null</td><td class="col-cell">C2</td></tr>
+  <tr><td><code>identity_mirrors.top_sheet.client_name</code></td><td class="col-type">string | null</td><td class="col-cell">C3</td></tr>
+  <tr><td><code>identity_mirrors.top_sheet.client_inquiry_no</code></td><td class="col-type">string | null</td><td class="col-cell">C4</td></tr>
+  <tr><td><code>identity_mirrors.top_sheet.subject</code></td><td class="col-type">string | null</td><td class="col-cell">C5</td></tr>
+  <tr><td><code>identity_mirrors.top_sheet.project_name</code></td><td class="col-type">string | null</td><td class="col-cell">C6</td></tr>
+  <tr><td><code>identity_mirrors.top_sheet.dated</code></td><td class="col-type">IsoDateString | null</td><td class="col-cell">C7</td></tr>
+</table>
+
+<div class="patched">
+<h3>5.4 Column model <span class="patch-label">v1.1 patch — renamed</span></h3>
+<table>
+  <tr><th>Column</th><th>Header (row 9 / row 10)</th><th>Canonical field</th></tr>
+  <tr><td class="col-cell">B</td><td>Description</td><td><code>particular</code></td></tr>
+  <tr><td class="col-cell">C</td><td>Budget / Rev-00</td><td><code>rev00_value</code></td></tr>
+  <tr><td class="col-cell">D</td><td>%</td><td><code>rev00_ratio</code></td></tr>
+  <tr><td class="col-cell">E</td><td>Budget / Rev-01</td><td><code>rev01_value</code></td></tr>
+  <tr><td class="col-cell">F</td><td>%</td><td><code>rev01_ratio</code></td></tr>
+  <tr><td class="col-cell">G</td><td>1</td><td><code>period_1_value</code></td></tr>
+  <tr><td class="col-cell">H</td><td>2</td><td><code>period_2_value</code></td></tr>
+  <tr><td class="col-cell">I</td><td>3</td><td><code>period_3_value</code></td></tr>
+  <tr><td class="col-cell">J</td><td>4</td><td><code>period_4_value</code></td></tr>
+  <tr><td class="col-cell">K</td><td>5</td><td><code>period_5_value</code></td></tr>
+  <tr><td class="col-cell">L</td><td>6</td><td><code>period_6_value</code></td></tr>
+  <tr><td class="col-cell">M</td><td>7</td><td><code>period_7_value</code></td></tr>
+  <tr><td class="col-cell">N</td><td>8</td><td><code>period_8_value</code></td></tr>
+  <tr><td class="col-cell">O</td><td>9</td><td><code>period_9_value</code></td></tr>
+  <tr><td class="col-cell">P</td><td>10</td><td><code>period_10_value</code></td></tr>
+  <tr><td class="col-cell">Q</td><td>11</td><td><code>period_11_value</code></td></tr>
+  <tr><td class="col-cell">R</td><td>12</td><td><code>period_12_value</code></td></tr>
+</table>
+<p>Columns S:V exist but are all zero/blank in rows 11:76 — not parsed in V1.</p>
+<p><strong>Rationale for v1.1 rename:</strong> Column C is labeled "Rev-00" in row 10. Calling it <code>budget_value</code> is vague — <code>rev00_value</code> is precise, future-proof, and easier for downstream similarity comparison.</p>
+</div>
+
+<h3>5.5 Table boundaries &amp; row types</h3>
+<p>Main body: rows 11 : 76.</p>
+<table>
+  <tr><th>Row type</th><th>Rows</th><th>Action</th></tr>
+  <tr><td><strong>Section headers</strong></td><td>11 (REVENUE), 19 (PROJECT DIRECT COST:), 62 (PROJECT INDIRECT COST:)</td><td>Skip</td></tr>
+  <tr><td><strong>Business rows</strong></td><td>12:18, 20:58, 60:61, 63:76</td><td>Keep (including zero-value rows)</td></tr>
+  <tr><td><strong>Useless technical row</strong></td><td>59</td><td>Skip (no label, all zeros)</td></tr>
+  <tr><td><strong>Post-table diagnostics</strong></td><td>77, 79, 84, 85</td><td>Skip (unlabeled, error cells in R77:V77)</td></tr>
+</table>
+
+<h4>Section classification</h4>
+<table>
+  <tr><th>Section</th><th>Rows</th></tr>
+  <tr><td><code>revenue</code></td><td>12 : 18</td></tr>
+  <tr><td><code>project_direct_cost</code></td><td>20 : 61</td></tr>
+  <tr><td><code>project_indirect_cost</code></td><td>63 : 70</td></tr>
+  <tr><td><code>profitability</code></td><td>71 : 76</td></tr>
+</table>
+
+<div class="patched">
+<h4>Line kind classification <span class="patch-label">v1.1 patch</span></h4>
+<table>
+  <tr><th><code>line_kind</code></th><th>Canonical keys</th></tr>
+  <tr><td><code>"summary"</code></td><td><code>total_revenue</code>, <code>total_project_direct_cost</code>, <code>contribution_margin</code>, <code>total_project_indirect_cost</code>, <code>total_project_cost</code>, <code>gross_profit</code>, <code>patam</code></td></tr>
+  <tr><td><code>"detail"</code></td><td>Everything else, including <code>bu_overheads</code>, <code>profit_before_zakat_tax</code>, <code>zakat_tax</code></td></tr>
+</table>
+</div>
+
+<div class="callout callout-amber">
+  <div class="callout-title">Top Sheet label dash-prefix rule</div>
+  Every regular row label has a leading <code>-</code> character (e.g., <code>"-Revenue Normal Work"</code>, <code>"-Direct Material"</code>). Summary rows and section headers have no dash. Before canonical key matching: strip the leading <code>-</code> and trim. This also serves as a free row-type signal.
+</div>
+
+<h4>Boolean quirk</h4>
+<p>Cell <code>C45</code> ("Kick of Meeting") is type BOOLEAN with value 0. Same normalization: <code>bool false → 0</code>.</p>
+
+<h4>Column F quirk</h4>
+<p>All 63 non-blank cells in column F are TEXT type containing empty strings — Rev-01 is not populated in this workbook. Normalize empty-string TEXT cells to <code>null</code>.</p>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 6: FROZEN TYPED SCHEMA -->
+<!-- ============================================================ -->
+<h2 id="s6"><span class="sn">06</span> Frozen Typed Schema (v1.1 patched)</h2>
+
+<h3>6.1 Type notation</h3>
+<pre>type IsoDateString = string;       // format: YYYY-MM-DD
+type IsoDateTimeString = string;   // format: ISO 8601 datetime
+
+type ParserStatus       = "parsed_ok" | "parsed_with_warnings" | "failed";
+type SheetParseStatus   = "parsed_ok" | "parsed_with_warnings" | "failed" | "skipped";
+type Severity           = "info" | "warning" | "error";
+type CheckStatus        = "pass" | "warn" | "fail" | "skipped";
+type SheetName          = "General" | "Bid S" | "Top Sheet";
+
+type BidSection         = "direct_cost" | "other_overheads" | "pricing_final";
+type BidLineKind        = "detail" | "summary";
+
+type TopSheetSection    = "revenue" | "project_direct_cost" | "project_indirect_cost" | "profitability";
+type TopSheetLineKind   = "detail" | "summary";</pre>
+
+<h3>6.2 Top-level envelope</h3>
+<pre>interface WorkbookParseEnvelope {
+  rfq_id: string;
+  template_name: string;                 // "ghi_estimation_workbook_v1"
+  workbook_format: string;               // "xls"
+  workbook_file_name: string | null;
+  workbook_blob_path: string | null;
+  template_match: boolean;
+  parsed_at: IsoDateTimeString;
+  parser_version: string;
+
+  workbook_profile: WorkbookProfile;
+  cost_breakdown_profile: CostBreakdownProfile;
+  parser_report: ParserReport;
+}</pre>
+
+<h3>6.3 WorkbookProfile</h3>
+<pre>interface WorkbookProfile {
+  rfq_identity: RfqIdentityPrimary;
+  identity_mirrors: {
+    bid_s: RfqIdentityMirrorBidS;
+    top_sheet: RfqIdentityMirrorTopSheet;
+  };
+  general_item_rows: GeneralItemRow[];
+  general_summary: GeneralSummary;
+  bid_meta: BidMeta;
+}
+
+interface RfqIdentityPrimary {
+  inquiry_no: string | null;
+  revision_no: string | null;
+  client_name: string | null;
+  status: string | null;
+  client_inquiry_no: string | null;
+  subject: string | null;
+  project_name: string | null;
+  inquiry_date: IsoDateString | null;
+}
+
+interface RfqIdentityMirrorBidS {
+  inquiry_no: string | null;
+  client_name: string | null;
+  client_inquiry_no: string | null;
+  subject: string | null;
+  project_name: string | null;
+}
+
+interface RfqIdentityMirrorTopSheet {
+  inquiry_no: string | null;
+  client_name: string | null;
+  client_inquiry_no: string | null;
+  subject: string | null;
+  project_name: string | null;
+  dated: IsoDateString | null;
+}
+
+interface GeneralItemRow {
+  sheet_row: integer;
+  sr_no: integer | null;
+  item_tag: string | null;
+  item_revision: string | null;
+  item_description: string | null;
+  qty: number | null;
+  diameter: number | null;
+  length: number | null;
+  thickness: number | null;
+  unit_weight_ton: number | null;
+  total_weight_ton: number | null;
+  material: string | null;
+  item_type: string | null;
+  rt_level: string | null;
+  rt_source: string | null;
+  pwht: boolean | null;
+  asme_stamp: boolean | null;
+  nb_regn_cost_flag: boolean | null;
+  fea_cost_flag: boolean | null;
+  bolts_tensioner_cost_flag: boolean | null;
+  material_freight_cost_flag: boolean | null;
+  helium_leak_test_cost_flag: boolean | null;
+  kom_flag: boolean | null;
+}
+
+interface GeneralSummary {
+  item_count: integer | null;
+  total_qty: number | null;
+  total_weight_ton: number | null;
+}
+
+interface BidMeta {
+  direct_mh: number | null;
+  indirect_mh: number | null;
+  exchange_rate: number | null;
+  total_weight_ton: number | null;
+  tentative_po_date: IsoDateString | null;
+  delivery_text: string | null;
+  dated: IsoDateString | null;
+  status: string | null;
+}</pre>
+
+<h3>6.4 CostBreakdownProfile</h3>
+<pre>interface CostBreakdownProfile {
+  bid_summary_lines: BidSummaryLine[];
+  bid_summary: BidSummary;
+  top_sheet_lines: TopSheetLine[];
+  top_sheet_summary: TopSheetSummary;
+}
+
+interface BidSummaryLine {
+  sheet_row: integer;
+  section: BidSection;
+  line_kind: BidLineKind;
+  row_no_label: string | null;
+  particular_raw: string | null;
+  particular_normalized: string | null;
+  canonical_key: string | null;
+  basis_factor: number | null;
+  amount_sar: number | null;
+  amount_usd: number | null;
+  share_ratio: number | null;
+  per_ton_sar: number | null;
+  per_ton_usd: number | null;
+}
+
+interface BidSummaryMetric {
+  sheet_row: integer | null;
+  canonical_key: string;
+  particular_raw: string | null;           // v1.1 addition
+  particular_normalized: string | null;    // v1.1 addition
+  basis_factor: number | null;
+  amount_sar: number | null;
+  amount_usd: number | null;
+  share_ratio: number | null;
+  per_ton_sar: number | null;
+  per_ton_usd: number | null;
+}
+
+interface BidSummary {
+  total_direct_cost: BidSummaryMetric;
+  total_other_overheads: BidSummaryMetric;
+  total_gross_cost: BidSummaryMetric;
+  gross_margin: BidSummaryMetric;
+  gross_price: BidSummaryMetric;
+  escalation_on_material: BidSummaryMetric;
+  negotiation: BidSummaryMetric;
+  grand_total: BidSummaryMetric;
+}</pre>
+
+<div class="patched">
+<h3>6.5 Top Sheet interfaces <span class="patch-label">v1.1 — rev00 rename</span></h3>
+<pre>interface TopSheetLine {
+  sheet_row: integer;
+  section: TopSheetSection;
+  line_kind: TopSheetLineKind;
+  particular_raw: string | null;
+  particular_normalized: string | null;
+  canonical_key: string | null;
+  rev00_value: number | null;              // was budget_value
+  rev00_ratio: number | null;              // was budget_ratio
+  rev01_value: number | null;
+  rev01_ratio: number | null;
+  period_1_value: number | null;
+  period_2_value: number | null;
+  period_3_value: number | null;
+  period_4_value: number | null;
+  period_5_value: number | null;
+  period_6_value: number | null;
+  period_7_value: number | null;
+  period_8_value: number | null;
+  period_9_value: number | null;
+  period_10_value: number | null;
+  period_11_value: number | null;
+  period_12_value: number | null;
+}
+
+interface TopSheetMetric {
+  sheet_row: integer | null;
+  canonical_key: string;
+  particular_raw: string | null;           // v1.1 addition
+  particular_normalized: string | null;    // v1.1 addition
+  rev00_value: number | null;              // was budget_value
+  rev00_ratio: number | null;              // was budget_ratio
+  rev01_value: number | null;
+  rev01_ratio: number | null;
+  period_1_value: number | null;
+  period_2_value: number | null;
+  period_3_value: number | null;
+  period_4_value: number | null;
+  period_5_value: number | null;
+  period_6_value: number | null;
+  period_7_value: number | null;
+  period_8_value: number | null;
+  period_9_value: number | null;
+  period_10_value: number | null;
+  period_11_value: number | null;
+  period_12_value: number | null;
+}
+
+interface TopSheetSummary {
+  total_revenue: TopSheetMetric;
+  total_project_direct_cost: TopSheetMetric;
+  contribution_margin: TopSheetMetric;
+  total_project_indirect_cost: TopSheetMetric;
+  total_project_cost: TopSheetMetric;
+  gross_profit: TopSheetMetric;
+  bu_overheads: TopSheetMetric;
+  profit_before_zakat_tax: TopSheetMetric;
+  zakat_tax: TopSheetMetric;
+  patam: TopSheetMetric;
+}</pre>
+</div>
+
+<h3>6.6 ParserReport interfaces</h3>
+<pre>interface ParserReport {
+  status: ParserStatus;
+  parsed_sheets: SheetName[];
+  skipped_sheets: string[];
+  warnings: ParserIssue[];
+  errors: ParserIssue[];
+  anchor_checks: AnchorCheck[];
+  cross_checks: CrossCheck[];
+  sheet_reports: {
+    general: SheetReport;
+    bid_s: SheetReport;
+    top_sheet: SheetReport;
+  };
+}
+
+interface ParserIssue {
+  code: string;
+  severity: Severity;
+  sheet_name: string | null;
+  cell_ref: string | null;
+  row_number: integer | null;
+  field_path: string | null;
+  message: string;
+  expected_value: string | number | boolean | null;
+  actual_value: string | number | boolean | null;
+  raw_value: string | number | boolean | null;
+}
+
+interface AnchorCheck {
+  sheet_name: SheetName;
+  cell_ref: string;
+  expected_normalized_value: string | number;
+  actual_normalized_value: string | number | null;
+  passed: boolean;
+}
+
+interface CrossCheck {
+  code: string;
+  status: CheckStatus;
+  left_field_path: string;
+  right_field_path: string;
+  left_value: string | number | null;
+  right_value: string | number | null;
+  tolerance_abs: number | null;
+  tolerance_rel: number | null;
+  delta_abs: number | null;
+  delta_rel: number | null;
+  note: string | null;
+}
+
+interface SheetReport {
+  sheet_name: SheetName;
+  status: SheetParseStatus;
+  merged_regions_count: integer | null;
+  expected_body_range: string | null;
+  rows_scanned: integer | null;
+  rows_kept: integer | null;
+  rows_skipped: integer | null;
+  warning_count: integer;
+  error_count: integer;
+}</pre>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 7: OWNERSHIP MATRIX -->
+<!-- ============================================================ -->
+<h2 id="s7"><span class="sn">07</span> Ownership Matrix</h2>
+
+<h3>7.1 Primary identity — owned by General</h3>
+<table>
+  <tr><th>Field path</th><th>Type</th><th>Owner</th></tr>
+  <tr><td><code>workbook_profile.rfq_identity.inquiry_no</code></td><td class="col-type">string | null</td><td class="col-owner">General D4</td></tr>
+  <tr><td><code>workbook_profile.rfq_identity.revision_no</code></td><td class="col-type">string | null</td><td class="col-owner">General H4</td></tr>
+  <tr><td><code>workbook_profile.rfq_identity.client_name</code></td><td class="col-type">string | null</td><td class="col-owner">General D5</td></tr>
+  <tr><td><code>workbook_profile.rfq_identity.status</code></td><td class="col-type">string | null</td><td class="col-owner">General H5</td></tr>
+  <tr><td><code>workbook_profile.rfq_identity.client_inquiry_no</code></td><td class="col-type">string | null</td><td class="col-owner">General D6</td></tr>
+  <tr><td><code>workbook_profile.rfq_identity.subject</code></td><td class="col-type">string | null</td><td class="col-owner">General D7</td></tr>
+  <tr><td><code>workbook_profile.rfq_identity.project_name</code></td><td class="col-type">string | null</td><td class="col-owner">General D8</td></tr>
+  <tr><td><code>workbook_profile.rfq_identity.inquiry_date</code></td><td class="col-type">IsoDateString | null</td><td class="col-owner">General D9</td></tr>
+</table>
+
+<h3>7.2 Mirrors — owned by Bid S and Top Sheet</h3>
+<p>Bid S mirror: <code>C2</code>–<code>C6</code>. Top Sheet mirror: <code>C2</code>–<code>C7</code> (includes <code>dated</code>).</p>
+
+<h3>7.3 Data ownership summary</h3>
+<table>
+  <tr><th>Data block</th><th>Owner</th><th>Location in schema</th></tr>
+  <tr><td>Primary RFQ identity</td><td class="col-owner">General</td><td><code>workbook_profile.rfq_identity</code></td></tr>
+  <tr><td>Equipment item rows</td><td class="col-owner">General</td><td><code>workbook_profile.general_item_rows[]</code></td></tr>
+  <tr><td>Item summary (computed)</td><td class="col-owner">General</td><td><code>workbook_profile.general_summary</code></td></tr>
+  <tr><td>Bid metadata</td><td class="col-owner">Bid S</td><td><code>workbook_profile.bid_meta</code></td></tr>
+  <tr><td>Bid cost lines</td><td class="col-owner">Bid S</td><td><code>cost_breakdown_profile.bid_summary_lines[]</code></td></tr>
+  <tr><td>Bid promoted totals</td><td class="col-owner">Bid S</td><td><code>cost_breakdown_profile.bid_summary</code></td></tr>
+  <tr><td>Commercial lines</td><td class="col-owner">Top Sheet</td><td><code>cost_breakdown_profile.top_sheet_lines[]</code></td></tr>
+  <tr><td>Commercial promoted totals</td><td class="col-owner">Top Sheet</td><td><code>cost_breakdown_profile.top_sheet_summary</code></td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 8: CANONICAL KEYS -->
+<!-- ============================================================ -->
+<h2 id="s8"><span class="sn">08</span> Canonical Key Tables (Frozen)</h2>
+
+<h3>8.1 Bid S — 35 canonical keys</h3>
+<table>
+  <tr><th>Row</th><th>Raw label</th><th>Canonical key</th><th>Section</th><th>Kind</th></tr>
+  <tr><td>14</td><td>Material</td><td><code>material</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>15</td><td>Direct Manhours cost (GHI)</td><td><code>direct_manhours_ghi</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>16</td><td>Direct Manhours cost (HIRE)</td><td><code>direct_manhours_hire</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>17</td><td>Indirect Manhours Cost</td><td><code>indirect_manhours</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>18</td><td>Design</td><td><code>design</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>19</td><td>Consumable</td><td><code>consumable</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>20</td><td>Garnet</td><td><code>garnet</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>21</td><td>Paint (Ext.)</td><td><code>paint_external</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>22</td><td>Paint (Int.)</td><td><code>paint_internal</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>23</td><td>NDT</td><td><code>ndt</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>24</td><td>PWHT</td><td><code>pwht</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>25</td><td>Water</td><td><code>water</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>26</td><td>FEA Analysis</td><td><code>fea_analysis</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>27</td><td>U-Stamp</td><td><code>u_stamp</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>28</td><td>NB</td><td><code>nb</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>29</td><td>Bolts Tensioning</td><td><code>bolts_tensioning</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>30</td><td>Freight Charges</td><td><code>freight_charges</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>31</td><td>VCI-309</td><td><code>vci_309</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>32</td><td>Hyd. Test Material/Test Assy</td><td><code>hyd_test_material_test_assy</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>33</td><td>CP</td><td><code>cp</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>34</td><td>Transport</td><td><code>transport</code></td><td>direct_cost</td><td>detail</td></tr>
+  <tr><td>35</td><td>Total Direct Cost &nbsp;(A)</td><td><code>total_direct_cost</code></td><td>direct_cost</td><td><strong>summary</strong></td></tr>
+  <tr><td>37</td><td>Contingency of Direct Cost "A"</td><td><code>contingency_direct_cost</code></td><td>other_overheads</td><td>detail</td></tr>
+  <tr><td>38</td><td>Kick of meeting</td><td><code>kickoff_meeting</code></td><td>other_overheads</td><td>detail</td></tr>
+  <tr><td>39</td><td>Agent Fee</td><td><code>agent_fee</code></td><td>other_overheads</td><td>detail</td></tr>
+  <tr><td>40</td><td>Insurance</td><td><code>insurance</code></td><td>other_overheads</td><td>detail</td></tr>
+  <tr><td>41</td><td>Financial Charges</td><td><code>financial_charges</code></td><td>other_overheads</td><td>detail</td></tr>
+  <tr><td>42</td><td>BU Overheads</td><td><code>bu_overheads</code></td><td>other_overheads</td><td>detail</td></tr>
+  <tr><td>43</td><td>Total Other Overheads</td><td><code>total_other_overheads</code></td><td>other_overheads</td><td><strong>summary</strong></td></tr>
+  <tr><td>44</td><td>Total Gross Cost (B)</td><td><code>total_gross_cost</code></td><td>pricing_final</td><td><strong>summary</strong></td></tr>
+  <tr><td>45</td><td>Gross Margin</td><td><code>gross_margin</code></td><td>pricing_final</td><td>detail</td></tr>
+  <tr><td>46</td><td>Gross Price</td><td><code>gross_price</code></td><td>pricing_final</td><td><strong>summary</strong></td></tr>
+  <tr><td>47</td><td>Escalation on Material</td><td><code>escalation_on_material</code></td><td>pricing_final</td><td>detail</td></tr>
+  <tr><td>48</td><td>Negotiation</td><td><code>negotiation</code></td><td>pricing_final</td><td>detail</td></tr>
+  <tr><td>49</td><td>GRAND TOTAL</td><td><code>grand_total</code></td><td>pricing_final</td><td><strong>summary</strong></td></tr>
+</table>
+<p><em>Note: Row 35 actual label has a double space: "Total Direct Cost &nbsp;(A)". Label normalization (collapse spaces) handles this.</em></p>
+
+<h3>8.2 Top Sheet — 62 canonical keys</h3>
+<table>
+  <tr><th>Row</th><th>Raw label (after dash-strip)</th><th>Canonical key</th><th>Section</th><th>Kind</th></tr>
+  <tr><td>12</td><td>Revenue Normal Work</td><td><code>revenue_normal_work</code></td><td>revenue</td><td>detail</td></tr>
+  <tr><td>13</td><td>Revenue Accrued</td><td><code>revenue_accrued</code></td><td>revenue</td><td>detail</td></tr>
+  <tr><td>14</td><td>Revenue Extra Work</td><td><code>revenue_extra_work</code></td><td>revenue</td><td>detail</td></tr>
+  <tr><td>15</td><td>Revenue Escalation</td><td><code>revenue_escalation</code></td><td>revenue</td><td>detail</td></tr>
+  <tr><td>16</td><td>Revenue Internal</td><td><code>revenue_internal</code></td><td>revenue</td><td>detail</td></tr>
+  <tr><td>17</td><td>Revenue Others</td><td><code>revenue_others</code></td><td>revenue</td><td>detail</td></tr>
+  <tr><td>18</td><td>TOTAL REVENUE</td><td><code>total_revenue</code></td><td>revenue</td><td><strong>summary</strong></td></tr>
+  <tr><td>20</td><td>Direct Material</td><td><code>direct_material</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>21</td><td>Direct Labour (Owned Labour)</td><td><code>direct_labour_owned</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>22</td><td>Direct Manpower (Hired Labour)</td><td><code>direct_manpower_hired</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>23</td><td>In-Direct Labour (Owned Labour)</td><td><code>indirect_labour_owned</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>24</td><td>Design Cost</td><td><code>design_cost</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>25</td><td>Boarding &amp; Lodging of D. Owned Labour</td><td><code>boarding_lodging_direct_owned</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>26</td><td>Boarding &amp; Lodging of D. Hired Labour</td><td><code>boarding_lodging_direct_hired</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>27</td><td>Mob. &amp; Demob. of Direct Labour</td><td><code>mob_demob_direct_labour</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>28</td><td>Direct Consumables</td><td><code>direct_consumables</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>29</td><td>Garnet</td><td><code>garnet</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>30</td><td>Paint</td><td><code>paint</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>31</td><td>Passivation Paste</td><td><code>passivation_paste</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>32</td><td>NDT</td><td><code>ndt</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>33</td><td>PWHT / Stress Relieving</td><td><code>pwht_stress_relieving</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>34</td><td>Water (Hydro Test)</td><td><code>water_hydro_test</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>35</td><td>FEA Analysis</td><td><code>fea_analysis</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>36</td><td>U-Stamp (ASME Ispection)</td><td><code>u_stamp_asme_inspection</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>37</td><td>NB (National Board Registration)</td><td><code>nb_national_board_registration</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>38</td><td>Bolts Tensioning</td><td><code>bolts_tensioning</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>39</td><td>Air Freight Charges</td><td><code>air_freight_charges</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>40</td><td>Internal Protection</td><td><code>internal_protection</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>41</td><td>Hydro Test Material/ Test Assy.</td><td><code>hydro_test_material_test_assy</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>42</td><td>Special Leak Testing ( Helium L. Test)</td><td><code>special_leak_testing_helium</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>43</td><td>Transportation</td><td><code>transportation</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>44</td><td>Contingencies</td><td><code>contingencies</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>45</td><td>Kick of Meeting</td><td><code>kickoff_meeting</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>46</td><td>Agent / Consultancy Fee</td><td><code>agent_consultancy_fee</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>47</td><td>Insurance</td><td><code>insurance</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>48</td><td>Financial Charges</td><td><code>financial_charges</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>49</td><td>Escalation On Material</td><td><code>escalation_on_material</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>50</td><td>Negotiation</td><td><code>negotiation</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>51</td><td>Sub-Contracting</td><td><code>sub_contracting</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>52</td><td>Inter BA Sub-Contracting</td><td><code>inter_ba_sub_contracting</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>53</td><td>Equipment O&amp;M</td><td><code>equipment_om</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>54</td><td>Equipment / Vehicle POL</td><td><code>equipment_vehicle_pol</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>55</td><td>Rental of Equipment</td><td><code>rental_of_equipment</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>56</td><td>Tools</td><td><code>tools</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>57</td><td>Depreciation &amp; Amortization</td><td><code>depreciation_amortization</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>58</td><td>Other Overheads - Direct</td><td><code>other_overheads_direct</code></td><td>project_direct_cost</td><td>detail</td></tr>
+  <tr><td>60</td><td>Total Project Direct Cost</td><td><code>total_project_direct_cost</code></td><td>project_direct_cost</td><td><strong>summary</strong></td></tr>
+  <tr><td>61</td><td>CONTRIBUTION MARGIN</td><td><code>contribution_margin</code></td><td>project_direct_cost</td><td><strong>summary</strong></td></tr>
+  <tr><td>63</td><td>Const. Exp. General</td><td><code>const_exp_general</code></td><td>project_indirect_cost</td><td>detail</td></tr>
+  <tr><td>64</td><td>Repair &amp; Maintenance</td><td><code>repair_maintenance</code></td><td>project_indirect_cost</td><td>detail</td></tr>
+  <tr><td>65</td><td>Site Facilities</td><td><code>site_facilities</code></td><td>project_indirect_cost</td><td>detail</td></tr>
+  <tr><td>66</td><td>Salaries &amp; Benefits</td><td><code>salaries_benefits</code></td><td>project_indirect_cost</td><td>detail</td></tr>
+  <tr><td>67</td><td>Boarding &amp; Lodging of Indirect</td><td><code>boarding_lodging_indirect</code></td><td>project_indirect_cost</td><td>detail</td></tr>
+  <tr><td>68</td><td>Mob. &amp; Demob. of Indirect</td><td><code>mob_demob_indirect</code></td><td>project_indirect_cost</td><td>detail</td></tr>
+  <tr><td>69</td><td>Other Overheads - Indirect</td><td><code>other_overheads_indirect</code></td><td>project_indirect_cost</td><td>detail</td></tr>
+  <tr><td>70</td><td>Total Project Indirect Cost</td><td><code>total_project_indirect_cost</code></td><td>project_indirect_cost</td><td><strong>summary</strong></td></tr>
+  <tr><td>71</td><td>TOTAL PROJECT COST</td><td><code>total_project_cost</code></td><td>profitability</td><td><strong>summary</strong></td></tr>
+  <tr><td>72</td><td>GROSS PROFIT</td><td><code>gross_profit</code></td><td>profitability</td><td><strong>summary</strong></td></tr>
+  <tr><td>73</td><td>BU Overheads</td><td><code>bu_overheads</code></td><td>profitability</td><td>detail</td></tr>
+  <tr><td>74</td><td>Profit before Zakat &amp; Tax</td><td><code>profit_before_zakat_tax</code></td><td>profitability</td><td>detail</td></tr>
+  <tr><td>75</td><td>Zakat &amp; Tax</td><td><code>zakat_tax</code></td><td>profitability</td><td>detail</td></tr>
+  <tr><td>76</td><td>PATAM</td><td><code>patam</code></td><td>profitability</td><td><strong>summary</strong></td></tr>
+</table>
+<p><em>Note: "ASME Ispection" is a typo in the actual workbook template. The canonical key preserves it as-is for matching.</em></p>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 9: NORMALIZATION RULES -->
+<!-- ============================================================ -->
+<h2 id="s9"><span class="sn">09</span> Normalization Rules (Frozen)</h2>
+
+<h3>9.1 Text normalization (all sheets)</h3>
+<p>For text comparison and canonical matching: trim leading/trailing whitespace → replace newlines and tabs with spaces → collapse repeated spaces to one.</p>
+
+<h3>9.2 Label handling per sheet</h3>
+<table>
+  <tr><th>Sheet</th><th>Rule</th></tr>
+  <tr><td>General</td><td>Normalize whitespace before comparing anchors. Anchors like B11 contain literal <code>\n</code>.</td></tr>
+  <tr><td>Bid S</td><td>Normalize whitespace before canonical mapping. Double-space in "Total Direct Cost &nbsp;(A)" must collapse.</td></tr>
+  <tr><td>Top Sheet</td><td>Normalize whitespace, then <strong>strip one leading <code>-</code> if present</strong>, then trim, then canonical-match.</td></tr>
+</table>
+
+<h3>9.3 Empty text normalization</h3>
+<p>If cell type is TEXT and value is empty or whitespace-only → serialize as <code>null</code>.</p>
+
+<h3>9.4 Numeric normalization</h3>
+<table>
+  <tr><th>Cell type</th><th>Output</th></tr>
+  <tr><td>Numeric</td><td>number</td></tr>
+  <tr><td>Boolean <code>false</code></td><td><code>0</code></td></tr>
+  <tr><td>Boolean <code>true</code></td><td><code>1</code></td></tr>
+  <tr><td>Blank</td><td><code>null</code></td></tr>
+</table>
+<p>Known boolean cells: Bid S <code>E38</code>, Top Sheet <code>C45</code> — both "Kick of Meeting" rows.</p>
+
+<h3>9.5 Boolean-like field normalization (General flags only)</h3>
+<table>
+  <tr><th>Cell value</th><th>Output</th></tr>
+  <tr><td><code>"Yes"</code></td><td><code>true</code></td></tr>
+  <tr><td><code>"No"</code></td><td><code>false</code></td></tr>
+  <tr><td>blank</td><td><code>null</code></td></tr>
+  <tr><td>unexpected string</td><td><code>null</code> + emit warning</td></tr>
+</table>
+
+<h3>9.6 Date normalization</h3>
+<p>For <code>.xls</code>: use <code>xlrd.xldate_as_tuple(value, workbook.datemode)</code> → format to <code>YYYY-MM-DD</code>. The <code>datemode</code> parameter is required — Excel 1900 vs 1904 date systems produce different results from the same serial.</p>
+<p>Applies to: <code>rfq_identity.inquiry_date</code> (General D9), <code>bid_meta.tentative_po_date</code> (Bid S G6), <code>bid_meta.dated</code> (Bid S I8), <code>identity_mirrors.top_sheet.dated</code> (Top Sheet C7).</p>
+
+<h3>9.7 Revision normalization</h3>
+<p>Fields H4 (General) and C14 (General items) may come as Excel numeric values like <code>0.0</code>. Rule: if numeric and whole number, convert to integer string. Example: <code>0.0 → "0"</code>.</p>
+
+<h3>9.8 Ratio rule</h3>
+<p>Column G in Bid S and columns D/F in Top Sheet are stored as ratios. <code>0.215068</code> means ~21.51%. Store as <code>share_ratio</code> / <code>rev00_ratio</code>. Do not multiply by 100 in the canonical output.</p>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 10: RETENTION RULES -->
+<!-- ============================================================ -->
+<h2 id="s10"><span class="sn">10</span> Row Retention Rules</h2>
+
+<h3>10.1 General</h3>
+<p><strong>Keep</strong> if at least one: meaningful <code>item_tag</code> (≠ <code>"E"</code>), meaningful <code>item_description</code> (≠ <code>"XXXX"</code>), <code>qty &gt; 0</code>, <code>total_weight_ton &gt; 0</code>.</p>
+<p><strong>Drop</strong> if ALL: <code>item_tag == "E"</code>, <code>item_description == "XXXX"</code>, <code>qty == 0 or null</code>, <code>unit_weight_ton == 0 or null</code>, <code>total_weight_ton == 0 or null</code>.</p>
+<p>Verified: 1 kept, 48 dropped from IF-25144.xls.</p>
+
+<h3>10.2 Bid S</h3>
+<p><strong>Keep</strong> if <code>particular</code> is present — including zero-value categories. Skip row 36 (section header), row 50 (footer), blank rows.</p>
+<p>Verified: 35 kept, 1 skipped from IF-25144.xls.</p>
+
+<h3>10.3 Top Sheet</h3>
+<p><strong>Keep</strong> if label exists, row is not a section header (11, 19, 62), and row is not excluded (59, 77, 79, 84, 85). Keep zero-value business rows.</p>
+<p>Verified: 62 kept, 8 skipped from IF-25144.xls.</p>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 11: CROSS-CHECKS -->
+<!-- ============================================================ -->
+<h2 id="s11"><span class="sn">11</span> Cross-Checks (Frozen)</h2>
+
+<h3>11.1 Identity exact checks</h3>
+<table>
+  <tr><th>Code</th><th>Left</th><th>Right</th><th>Status on IF-25144</th></tr>
+  <tr><td><code>GENERAL_vs_BID_S_INQUIRY_NO</code></td><td>General D4</td><td>Bid S C2</td><td><span class="tag tag-green">pass</span></td></tr>
+  <tr><td><code>GENERAL_vs_BID_S_CLIENT_NAME</code></td><td>General D5</td><td>Bid S C3</td><td><span class="tag tag-green">pass</span></td></tr>
+  <tr><td><code>GENERAL_vs_BID_S_CLIENT_INQUIRY_NO</code></td><td>General D6</td><td>Bid S C4</td><td><span class="tag tag-green">pass</span></td></tr>
+  <tr><td><code>GENERAL_vs_BID_S_SUBJECT</code></td><td>General D7</td><td>Bid S C5</td><td><span class="tag tag-green">pass</span></td></tr>
+  <tr><td><code>GENERAL_vs_BID_S_PROJECT_NAME</code></td><td>General D8</td><td>Bid S C6</td><td><span class="tag tag-green">pass</span></td></tr>
+  <tr><td><code>GENERAL_vs_TOP_SHEET_INQUIRY_NO</code></td><td>General D4</td><td>Top Sheet C2</td><td><span class="tag tag-green">pass</span></td></tr>
+  <tr><td><code>GENERAL_vs_TOP_SHEET_CLIENT_NAME</code></td><td>General D5</td><td>Top Sheet C3</td><td><span class="tag tag-green">pass</span></td></tr>
+  <tr><td><code>GENERAL_vs_TOP_SHEET_CLIENT_INQUIRY_NO</code></td><td>General D6</td><td>Top Sheet C4</td><td><span class="tag tag-green">pass</span></td></tr>
+  <tr><td><code>GENERAL_vs_TOP_SHEET_SUBJECT</code></td><td>General D7</td><td>Top Sheet C5</td><td><span class="tag tag-green">pass</span></td></tr>
+  <tr><td><code>GENERAL_vs_TOP_SHEET_PROJECT_NAME</code></td><td>General D8</td><td>Top Sheet C6</td><td><span class="tag tag-green">pass</span></td></tr>
+</table>
+
+<div class="patched">
+<h3>11.2 Numeric tolerance checks <span class="patch-label">v1.1 patch</span></h3>
+<table>
+  <tr><th>Code</th><th>Left</th><th>Right</th><th>Delta on IF-25144</th><th>Severity</th></tr>
+  <tr><td><code>GENERAL_TOTAL_WEIGHT_vs_BID_S_TOTAL_WEIGHT</code></td><td>General summary total_weight</td><td>Bid S G5</td><td>0.00</td><td>warn if &gt; 0.01%</td></tr>
+  <tr><td><code>TOP_SHEET_TOTAL_REVENUE_vs_BID_S_GRAND_TOTAL</code></td><td>Top Sheet row 18 (rev00)</td><td>Bid S row 49 (amount_sar)</td><td>7.48 SAR</td><td><span class="tag tag-amber">warn</span> if &gt; 0.01% relative</td></tr>
+  <tr><td><code>TOP_SHEET_FINANCIAL_CHARGES_vs_BID_S_FINANCIAL_CHARGES</code></td><td>Top Sheet row 48 (rev00)</td><td>Bid S row 41 (amount_sar)</td><td>0.00</td><td>warn</td></tr>
+  <tr><td><code>TOP_SHEET_ESCALATION_vs_BID_S_ESCALATION</code></td><td>Top Sheet row 49 (rev00)</td><td>Bid S row 47 (amount_sar)</td><td>0.00</td><td>warn</td></tr>
+  <tr><td><code>TOP_SHEET_NEGOTIATION_vs_BID_S_NEGOTIATION</code></td><td>Top Sheet row 50 (rev00)</td><td>Bid S row 48 (amount_sar)</td><td>0.00</td><td>warn</td></tr>
+  <tr><td><code>TOP_SHEET_DIRECT_COST_vs_BID_S_TOTAL_DIRECT_COST</code></td><td>Top Sheet row 60 (rev00)</td><td>Bid S row 35 (amount_sar)</td><td>59,253.70 SAR</td><td><span class="tag tag-blue">info</span> — scope difference expected, not anomaly</td></tr>
+</table>
+<p><strong>v1.1 change:</strong> Added <code>TOP_SHEET_TOTAL_REVENUE_vs_BID_S_GRAND_TOTAL</code> as the primary commercial cross-check (tight tolerance). Downgraded <code>TOP_SHEET_DIRECT_COST_vs_BID_S_TOTAL_DIRECT_COST</code> to <code>info</code> severity because the two sheets have structurally different aggregation scope — Top Sheet includes more cost categories inside "PROJECT DIRECT COST" than Bid S includes in "Total Direct Cost (A)".</p>
+</div>
+
+<h3>11.3 Cross-check interpretation policy</h3>
+<p>Identity mismatch → usually <code>warn</code>. Explainable commercial delta → <code>warn</code> or <code>info</code>, not <code>fail</code>. Only severe template corruption should become <code>fail</code>.</p>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 12: DIAGNOSTICS -->
+<!-- ============================================================ -->
+<h2 id="s12"><span class="sn">12</span> Diagnostics &amp; Observability</h2>
+
+<h3>12.1 Parser status semantics</h3>
+<table>
+  <tr><th>Status</th><th>Meaning</th></tr>
+  <tr><td><code>parsed_ok</code></td><td>No warnings, no errors. Clean parse.</td></tr>
+  <tr><td><code>parsed_with_warnings</code></td><td>Usable output exists, but at least one warning.</td></tr>
+  <tr><td><code>failed</code></td><td>Canonical output must not be trusted.</td></tr>
+</table>
+
+<h3>12.2 Warning/error codes</h3>
+<h4>General</h4>
+<p><code>GENERAL_MISSING_REQUIRED_ANCHOR</code>, <code>GENERAL_MISSING_REQUIRED_FIELD</code>, <code>GENERAL_INVALID_EXCEL_DATE</code>, <code>GENERAL_ITEM_ROW_SKIPPED_PLACEHOLDER</code>, <code>GENERAL_ITEM_ROW_PARTIAL_DATA</code>, <code>GENERAL_UNEXPECTED_HEADER_CHANGE</code></p>
+
+<h4>Bid S</h4>
+<p><code>BID_S_MISSING_REQUIRED_ANCHOR</code>, <code>BID_S_INVALID_EXCEL_DATE</code>, <code>BID_S_MISSING_REQUIRED_FIELD</code>, <code>BID_S_UNKNOWN_PARTICULAR_LABEL</code>, <code>BID_S_ARITHMETIC_MISMATCH</code>, <code>BID_S_IDENTITY_CROSSCHECK_MISMATCH</code>, <code>BID_S_UNEXPECTED_HEADER_CHANGE</code></p>
+
+<h4>Top Sheet</h4>
+<p><code>TOP_SHEET_MISSING_REQUIRED_ANCHOR</code>, <code>TOP_SHEET_INVALID_EXCEL_DATE</code>, <code>TOP_SHEET_MISSING_REQUIRED_FIELD</code>, <code>TOP_SHEET_UNKNOWN_LABEL</code>, <code>TOP_SHEET_IDENTITY_CROSSCHECK_MISMATCH</code>, <code>TOP_SHEET_COMMERCIAL_CROSSCHECK_MISMATCH</code>, <code>TOP_SHEET_EXCEL_ERROR_CELL</code>, <code>TOP_SHEET_UNEXPECTED_HEADER_CHANGE</code></p>
+
+<h3>12.3 Sheet report semantics</h3>
+<table>
+  <tr><th>Sheet</th><th><code>expected_body_range</code></th><th>Merged regions (IF-25144)</th></tr>
+  <tr><td>General</td><td><code>"14:62"</code></td><td>24</td></tr>
+  <tr><td>Bid S</td><td><code>"14:49"</code></td><td>50</td></tr>
+  <tr><td>Top Sheet</td><td><code>"11:76"</code></td><td>7</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 13: FULL JSON SKELETON -->
+<!-- ============================================================ -->
+<h2 id="s13"><span class="sn">13</span> Full JSON Skeleton (v1.1 patched)</h2>
+
+<pre>{
+  "rfq_id": "RFQ-123",
+  "template_name": "ghi_estimation_workbook_v1",
+  "workbook_format": "xls",
+  "workbook_file_name": "IF-25144.xls",
+  "workbook_blob_path": "raw/if-25144.xls",
+  "template_match": true,
+  "parsed_at": "2026-03-25T12:00:00Z",
+  "parser_version": "workbook-parser-v1.1",
+
+  "workbook_profile": {
+    "rfq_identity": {
+      "inquiry_no": "IF-25144",
+      "revision_no": "0",
+      "client_name": "Al Bawani Group",
+      "status": "Live",
+      "client_inquiry_no": "SA-AYPP-6-MR-022",
+      "subject": "Mech. Design, supply &amp; fabrication of Vessels",
+      "project_name": "Abqaiq Yanbu Pipeline SECTION 6 (AY-1L) BI-10-01575",
+      "inquiry_date": "2025-08-26"
+    },
+    "identity_mirrors": {
+      "bid_s": {
+        "inquiry_no": "IF-25144",
+        "client_name": "Al Bawani Group",
+        "client_inquiry_no": "SA-AYPP-6-MR-022",
+        "subject": "Mech. Design, supply &amp; fabrication of Vessels",
+        "project_name": "Abqaiq Yanbu Pipeline SECTION 6 (AY-1L) BI-10-01575"
+      },
+      "top_sheet": {
+        "inquiry_no": "IF-25144",
+        "client_name": "Al Bawani Group",
+        "client_inquiry_no": "SA-AYPP-6-MR-022",
+        "subject": "Mech. Design, supply &amp; fabrication of Vessels",
+        "project_name": "Abqaiq Yanbu Pipeline SECTION 6 (AY-1L) BI-10-01575",
+        "dated": "2025-08-26"
+      }
+    },
+    "general_item_rows": [
+      {
+        "sheet_row": 14,
+        "sr_no": 1,
+        "item_tag": "K18-D-0003",
+        "item_revision": "0",
+        "item_description": "DRAIN COLLECTION VESSEL",
+        "qty": 1.0,
+        "diameter": 2.63,
+        "length": 5.26,
+        "thickness": 14.0,
+        "unit_weight_ton": 10.249,
+        "total_weight_ton": 10.249,
+        "material": "SA 516 Gr. 70N",
+        "item_type": "H",
+        "rt_level": "Full",
+        "rt_source": "Ir192",
+        "pwht": false,
+        "asme_stamp": true,
+        "nb_regn_cost_flag": true,
+        "fea_cost_flag": false,
+        "bolts_tensioner_cost_flag": false,
+        "material_freight_cost_flag": false,
+        "helium_leak_test_cost_flag": false,
+        "kom_flag": false
+      }
+    ],
+    "general_summary": {
+      "item_count": 1,
+      "total_qty": 1.0,
+      "total_weight_ton": 10.249
+    },
+    "bid_meta": {
+      "direct_mh": 8199.58,
+      "indirect_mh": 1229.94,
+      "exchange_rate": 3.75,
+      "total_weight_ton": 10.249,
+      "tentative_po_date": "2025-08-26",
+      "delivery_text": "36 Weeks",
+      "dated": "2025-08-26",
+      "status": "Live"
+    }
+  },
+
+  "cost_breakdown_profile": {
+    "bid_summary_lines": [
+      {
+        "sheet_row": 14,
+        "section": "direct_cost",
+        "line_kind": "detail",
+        "row_no_label": "1-",
+        "particular_raw": "Material",
+        "particular_normalized": "Material",
+        "canonical_key": "material",
+        "basis_factor": null,
+        "amount_sar": 202293.24,
+        "amount_usd": 53944.86,
+        "share_ratio": 0.2151,
+        "per_ton_sar": 19736.94,
+        "per_ton_usd": 5263.18
+      }
+    ],
+    "bid_summary": {
+      "total_direct_cost":       { "sheet_row": 35, "canonical_key": "total_direct_cost",       "particular_raw": "Total Direct Cost  (A)", "particular_normalized": "Total Direct Cost (A)", "basis_factor": null, "amount_sar": 688524.32, "amount_usd": 183606.22, "share_ratio": 0.7320, "per_ton_sar": 67176.52, "per_ton_usd": 17913.74 },
+      "total_other_overheads":   { "sheet_row": 43, "canonical_key": "total_other_overheads",   "particular_raw": "Total Other Overheads",  "particular_normalized": "Total Other Overheads",  "basis_factor": null, "amount_sar": 174383.53, "amount_usd": 46502.27, "share_ratio": 0.1854, "per_ton_sar": 17013.93, "per_ton_usd": 4537.05 },
+      "total_gross_cost":        { "sheet_row": 44, "canonical_key": "total_gross_cost",        "particular_raw": "Total Gross Cost (B)",   "particular_normalized": "Total Gross Cost (B)",   "basis_factor": null, "amount_sar": 862907.85, "amount_usd": 230108.76, "share_ratio": 0.9174, "per_ton_sar": 84190.39, "per_ton_usd": 22450.77 },
+      "gross_margin":            { "sheet_row": 45, "canonical_key": "gross_margin",            "particular_raw": "Gross Margin",           "particular_normalized": "Gross Margin",           "basis_factor": 0.08, "amount_sar": 77692.00, "amount_usd": 20717.87, "share_ratio": 0.0826, "per_ton_sar": 7580.10, "per_ton_usd": 2021.36 },
+      "gross_price":             { "sheet_row": 46, "canonical_key": "gross_price",             "particular_raw": "Gross Price",            "particular_normalized": "Gross Price",            "basis_factor": null, "amount_sar": 940599.85, "amount_usd": 250826.63, "share_ratio": 1.0, "per_ton_sar": 91770.50, "per_ton_usd": 24472.13 },
+      "escalation_on_material":  { "sheet_row": 47, "canonical_key": "escalation_on_material",  "particular_raw": "Escalation on Material", "particular_normalized": "Escalation on Material", "basis_factor": 0.01145, "amount_sar": 11119.67, "amount_usd": 2965.24, "share_ratio": 0.01145, "per_ton_sar": 1084.90, "per_ton_usd": 289.31 },
+      "negotiation":             { "sheet_row": 48, "canonical_key": "negotiation",             "particular_raw": "Negotiation",            "particular_normalized": "Negotiation",            "basis_factor": 0.02, "amount_sar": 19423.00, "amount_usd": 5179.47, "share_ratio": 0.02, "per_ton_sar": 1895.02, "per_ton_usd": 505.34 },
+      "grand_total":             { "sheet_row": 49, "canonical_key": "grand_total",             "particular_raw": "GRAND TOTAL",            "particular_normalized": "GRAND TOTAL",            "basis_factor": null, "amount_sar": 971150.00, "amount_usd": 258973.33, "share_ratio": 1.03145, "per_ton_sar": 94751.16, "per_ton_usd": 25266.98 }
+    },
+
+    "top_sheet_lines": ["... (62 rows, see canonical key table for full list)"],
+    "top_sheet_summary": {
+      "total_revenue":               { "sheet_row": 18, "canonical_key": "total_revenue",               "particular_raw": "TOTAL REVENUE",             "particular_normalized": "TOTAL REVENUE",             "rev00_value": 971142.52, "rev00_ratio": 1.0,    "rev01_value": 0.0, "rev01_ratio": null, "period_1_value": "...", "...": "..." },
+      "total_project_direct_cost":   { "sheet_row": 60, "canonical_key": "total_project_direct_cost",   "particular_raw": "Total Project Direct Cost", "particular_normalized": "Total Project Direct Cost", "rev00_value": 747778.02, "rev00_ratio": 0.7700, "rev01_value": 0.0, "rev01_ratio": null, "period_1_value": "...", "...": "..." },
+      "contribution_margin":         { "sheet_row": 61, "canonical_key": "contribution_margin",         "particular_raw": "CONTRIBUTION MARGIN",       "particular_normalized": "CONTRIBUTION MARGIN",       "rev00_value": 223364.50, "rev00_ratio": 0.2300, "rev01_value": 0.0, "rev01_ratio": null, "period_1_value": "...", "...": "..." },
+      "total_project_indirect_cost": { "sheet_row": 70, "canonical_key": "total_project_indirect_cost", "particular_raw": "Total Project Indirect Cost","particular_normalized": "Total Project Indirect Cost","rev00_value": 0.0,       "rev00_ratio": 0.0,    "rev01_value": 0.0, "rev01_ratio": null, "period_1_value": "...", "...": "..." },
+      "total_project_cost":          { "sheet_row": 71, "canonical_key": "total_project_cost",          "particular_raw": "TOTAL PROJECT COST",        "particular_normalized": "TOTAL PROJECT COST",        "rev00_value": 747778.02, "rev00_ratio": 0.7700, "rev01_value": 0.0, "rev01_ratio": null, "period_1_value": "...", "...": "..." },
+      "gross_profit":                { "sheet_row": 72, "canonical_key": "gross_profit",                "particular_raw": "GROSS PROFIT",              "particular_normalized": "GROSS PROFIT",              "rev00_value": 223364.50, "rev00_ratio": 0.2300, "rev01_value": 0.0, "rev01_ratio": null, "period_1_value": "...", "...": "..." },
+      "bu_overheads":                { "sheet_row": 73, "canonical_key": "bu_overheads",                "particular_raw": "BU Overheads",              "particular_normalized": "BU Overheads",              "rev00_value": 145672.50, "rev00_ratio": 0.1549, "rev01_value": 0.0, "rev01_ratio": null, "period_1_value": "...", "...": "..." },
+      "profit_before_zakat_tax":     { "sheet_row": 74, "canonical_key": "profit_before_zakat_tax",     "particular_raw": "Profit before Zakat & Tax", "particular_normalized": "Profit before Zakat & Tax", "rev00_value": 77692.00,  "rev00_ratio": 0.0800, "rev01_value": 0.0, "rev01_ratio": null, "period_1_value": "...", "...": "..." },
+      "zakat_tax":                   { "sheet_row": 75, "canonical_key": "zakat_tax",                   "particular_raw": "Zakat & Tax",               "particular_normalized": "Zakat & Tax",               "rev00_value": null,      "rev00_ratio": 0.0,    "rev01_value": 0.0, "rev01_ratio": null, "period_1_value": "...", "...": "..." },
+      "patam":                       { "sheet_row": 76, "canonical_key": "patam",                       "particular_raw": "PATAM",                     "particular_normalized": "PATAM",                     "rev00_value": 77692.00,  "rev00_ratio": 0.0800, "rev01_value": 0.0, "rev01_ratio": null, "period_1_value": "...", "...": "..." }
+    }
+  },
+
+  "parser_report": {
+    "status": "parsed_with_warnings",
+    "parsed_sheets": ["General", "Bid S", "Top Sheet"],
+    "skipped_sheets": [],
+    "warnings": [],
+    "errors": [],
+    "anchor_checks": [],
+    "cross_checks": [],
+    "sheet_reports": {
+      "general":   { "sheet_name": "General",   "status": "parsed_ok", "merged_regions_count": 24, "expected_body_range": "14:62", "rows_scanned": 49, "rows_kept": 1,  "rows_skipped": 48, "warning_count": 0, "error_count": 0 },
+      "bid_s":     { "sheet_name": "Bid S",     "status": "parsed_ok", "merged_regions_count": 50, "expected_body_range": "14:49", "rows_scanned": 36, "rows_kept": 35, "rows_skipped": 1,  "warning_count": 0, "error_count": 0 },
+      "top_sheet": { "sheet_name": "Top Sheet", "status": "parsed_ok", "merged_regions_count": 7,  "expected_body_range": "11:76", "rows_scanned": 66, "rows_kept": 62, "rows_skipped": 4,  "warning_count": 0, "error_count": 0 }
+    }
+  }
+}</pre>
+
+
+<!-- ============================================================ -->
+<!-- V1.1 PATCH SUMMARY -->
+<!-- ============================================================ -->
+<div class="divider"></div>
+<h2><span class="sn">A</span> Appendix — v1.1 Patch Summary</h2>
+
+<p>These patches were applied based on a meticulous cell-by-cell verification of IF-25144.xls against the v1.0 schema. All patches are marked inline with <span class="patch-label">v1.1 patch</span> labels throughout this document.</p>
+
+<table>
+  <tr><th>#</th><th>Patch</th><th>Category</th><th>What changed</th></tr>
+  <tr>
+    <td>1</td>
+    <td><strong>line_kind classification rules</strong></td>
+    <td><span class="tag tag-red">Bug fix</span></td>
+    <td>Added explicit tables defining which canonical keys get <code>"summary"</code> vs <code>"detail"</code> for both Bid S and Top Sheet. Without this, implementers had to guess.</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td><strong>Top Sheet <code>budget_*</code> → <code>rev00_*</code></strong></td>
+    <td><span class="tag tag-red">Bug fix</span></td>
+    <td>Renamed <code>budget_value</code>/<code>budget_ratio</code> to <code>rev00_value</code>/<code>rev00_ratio</code>. Column C is labeled "Rev-00" in the workbook — the old name was imprecise and would cause confusion in downstream similarity comparisons.</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td><strong>Cross-check: revenue vs grand total</strong></td>
+    <td><span class="tag tag-red">Bug fix</span></td>
+    <td>Added <code>TOP_SHEET_TOTAL_REVENUE_vs_BID_S_GRAND_TOTAL</code> (tight tolerance). Downgraded <code>TOP_SHEET_DIRECT_COST_vs_BID_S_TOTAL_DIRECT_COST</code> from <code>warn</code> to <code>info</code> (structurally expected delta due to different aggregation scope).</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td><strong><code>particular_raw/normalized</code> in promoted metrics</strong></td>
+    <td><span class="tag tag-green">Enhancement</span></td>
+    <td>Added <code>particular_raw</code> and <code>particular_normalized</code> to <code>BidSummaryMetric</code> and <code>TopSheetMetric</code> for self-contained debugging.</td>
+  </tr>
+</table>
+
+<div class="callout callout-green">
+  <div class="callout-title">Next step</div>
+  This document is the frozen implementation contract. The next move is <strong>Step 8 — Implementation Blueprint</strong>: folder/module structure, parser interfaces, workbook reader adapter, extractor responsibilities, assembly flow, and where each output object is built.
+</div>
+
+</div>
+</body>
+</html>

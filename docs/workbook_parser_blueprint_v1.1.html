@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Step 8 — Workbook Parser Implementation Blueprint v1.1</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --surface: #141a22;
+    --surface-2: #1a2230;
+    --border: #2a3545;
+    --border-active: #3d5070;
+    --ink: #e8edf4;
+    --ink-2: #bcc5d2;
+    --ink-3: #8895a7;
+    --ink-4: #5e6b7d;
+    --blue: #5b9cf5;
+    --blue-dim: #5b9cf520;
+    --green: #4eca7a;
+    --green-dim: #4eca7a20;
+    --amber: #e0a83a;
+    --amber-dim: #e0a83a20;
+    --red: #ef6461;
+    --red-dim: #ef646120;
+    --purple: #b48eff;
+    --purple-dim: #b48eff18;
+    --cyan: #56d4c8;
+    --cyan-dim: #56d4c818;
+    --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+    --sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--ink-2); font-size: 14.5px; line-height: 1.7; }
+
+  .w { max-width: 1000px; margin: 0 auto; padding: 48px 28px 120px; }
+
+  nav {
+    position: sticky; top: 0; z-index: 100; background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 10px 28px; margin: 0 -28px 40px; overflow-x: auto; white-space: nowrap;
+  }
+  nav a { color: var(--ink-3); text-decoration: none; font-size: 12px; font-weight: 500; letter-spacing: 0.3px; margin-right: 16px; transition: color 0.15s; }
+  nav a:hover { color: var(--blue); }
+
+  h1 { font-size: 26px; font-weight: 700; color: var(--ink); letter-spacing: -0.5px; margin-bottom: 4px; }
+  .sub { color: var(--ink-3); font-size: 13.5px; margin-bottom: 36px; }
+  .sub code { background: var(--surface-2); padding: 2px 6px; border-radius: 4px; font-size: 11.5px; color: var(--amber); font-family: var(--mono); }
+  h2 { font-size: 19px; font-weight: 700; color: var(--ink); margin: 52px 0 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h2 .n { color: var(--ink-4); font-weight: 400; margin-right: 8px; font-size: 13px; }
+  h3 { font-size: 15px; font-weight: 600; color: var(--ink); margin: 28px 0 10px; }
+  h4 { font-size: 13.5px; font-weight: 600; color: var(--ink-2); margin: 18px 0 8px; }
+  p { margin-bottom: 12px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); padding: 1.5px 5px; border-radius: 3px; color: var(--cyan); }
+
+  pre {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 18px 22px; overflow-x: auto; margin: 12px 0 18px;
+    font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--ink-2);
+  }
+  pre .cmt { color: var(--ink-4); }
+  pre .kw { color: var(--purple); }
+  pre .fn { color: var(--blue); }
+  pre .str { color: var(--green); }
+  pre .cls { color: var(--amber); }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 12px; border: 1px solid var(--border); }
+  th { background: var(--surface); color: var(--ink); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+  td code { font-size: 11.5px; }
+  tr:nth-child(even) td { background: var(--surface-2); }
+
+  .callout { border-radius: 8px; padding: 16px 20px; margin: 16px 0; border-left: 3px solid; }
+  .c-blue { background: var(--blue-dim); border-color: var(--blue); }
+  .c-green { background: var(--green-dim); border-color: var(--green); }
+  .c-amber { background: var(--amber-dim); border-color: var(--amber); }
+  .c-red { background: var(--red-dim); border-color: var(--red); }
+  .c-purple { background: var(--purple-dim); border-color: var(--purple); }
+  .ct { font-weight: 600; color: var(--ink); margin-bottom: 4px; font-size: 13px; }
+
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.2px; }
+  .t-green { background: var(--green-dim); color: var(--green); }
+  .t-amber { background: var(--amber-dim); color: var(--amber); }
+  .t-red { background: var(--red-dim); color: var(--red); }
+
+  .tree { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin: 12px 0 18px; font-family: var(--mono); font-size: 12.5px; line-height: 1.8; color: var(--ink-2); }
+  .tree .dir { color: var(--amber); font-weight: 600; }
+  .tree .file { color: var(--ink-2); }
+  .tree .new { color: var(--green); }
+  .tree .note { color: var(--ink-4); font-style: italic; }
+  .tree .touch { color: var(--amber); }
+
+  .flow-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+  .flow-box { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 12px; font-weight: 500; }
+  .flow-arr { color: var(--ink-4); font-size: 16px; }
+
+  .phase { border-left: 3px solid var(--blue); padding-left: 16px; margin: 24px 0; }
+  .phase-num { font-family: var(--mono); font-size: 11px; color: var(--blue); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
+
+  .patch { border-left: 3px solid var(--green); padding-left: 12px; margin-left: -15px; }
+  .patch-label { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--green); background: var(--green-dim); padding: 1px 6px; border-radius: 3px; margin-left: 8px; vertical-align: middle; }
+
+  ul { margin: 8px 0 12px 20px; }
+  li { margin-bottom: 4px; }
+  .divider { height: 1px; background: var(--border); margin: 48px 0; }
+
+  @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="w">
+
+<nav>
+  <a href="#s1">Context</a>
+  <a href="#s2">Tree</a>
+  <a href="#s3">Reader</a>
+  <a href="#s4">Normalizers</a>
+  <a href="#s5">Extractors</a>
+  <a href="#s6">Assembler</a>
+  <a href="#s7">CrossChecks</a>
+  <a href="#s8">Controller</a>
+  <a href="#s9">Integration</a>
+  <a href="#s10">Tests</a>
+  <a href="#s11">Sequence</a>
+  <a href="#patches">Patches</a>
+</nav>
+
+<h1>Step 8 — Workbook Parser Implementation Blueprint</h1>
+<p class="sub">
+  Service: <code>rfq_intelligence_ms</code> &nbsp;|&nbsp;
+  Pipeline: P1 — Deterministic Workbook Parsing &nbsp;|&nbsp;
+  Schema: <code>Implementation Pack v1.1</code><br>
+  Architecture: BACAB pattern (routes → controllers → datasources) &nbsp;|&nbsp;
+  Stack: Python + FastAPI + xlrd<br>
+  Blueprint version: <code>v1.1</code> — all review patches applied
+</p>
+
+<div class="callout c-blue">
+  <div class="ct">What this blueprint defines</div>
+  This document maps every file you will create, every class responsibility, the exact data flow from <code>workbook.uploaded</code> event to canonical JSON output, and the implementation sequence. It follows BACAB's layered architecture and respects the frozen schema from the Implementation Pack v1.1.
+</div>
+
+
+<!-- ============================================================ -->
+<!-- S1: ARCHITECTURAL CONTEXT -->
+<!-- ============================================================ -->
+<h2 id="s1"><span class="n">01</span> Architectural Context</h2>
+
+<h3>1.1 Where the parser sits</h3>
+<p>The workbook parser is <strong>Layer 1 of Pipeline P1</strong> inside <code>rfq_intelligence_ms</code>. P1 has two layers: deterministic (workbook, folder tree, BOM) and LLM (specs, scope, QA/QC). This blueprint covers only the deterministic workbook layer.</p>
+
+<h3>1.2 BACAB mapping</h3>
+<table>
+  <tr><th>BACAB Layer</th><th>Parser Mapping</th><th>Responsibility</th></tr>
+  <tr><td><code>routes/</code></td><td><code>workbook_parse_routes.py</code></td><td>Exposes <code>POST /parse-workbook</code> for <strong>manual / dev / batch-seeding use</strong>. Calls controller, passes result through translator, returns API response.</td></tr>
+  <tr><td><code>controllers/</code></td><td><code>workbook_parse_controller.py</code></td><td>Orchestrates the full parse: download → validate → extract → assemble → cross-check → store. Returns the raw <code>WorkbookParseEnvelope</code> dict. Contains no Excel logic, no HTTP awareness.</td></tr>
+  <tr><td><code>translators/</code></td><td><code>workbook_parse_translator.py</code></td><td>Converts the internal envelope dict into the API response shape. Sits between controller and route — the route never returns the raw envelope directly.</td></tr>
+  <tr><td><code>datasources/</code></td><td><code>blob_datasource.py</code></td><td>Downloads workbook from Azure Blob Storage. Returns local file path.</td></tr>
+  <tr><td><code>datasources/</code></td><td><code>intelligence_snapshot_datasource.py</code></td><td>Stores the parsed result into the intelligence DB.</td></tr>
+  <tr><td colspan="3" style="background:var(--surface-2);"><em>The parser core lives under a new <code>parsers/workbook/</code> directory — a domain module called by the controller. This follows BACAB convention: the controller calls specialized logic modules, just like it calls datasources and connectors.</em></td></tr>
+</table>
+
+<h3>1.3 Data flow</h3>
+<div class="flow-row">
+  <div class="flow-box" style="border-color:var(--amber);">workbook.uploaded</div>
+  <div class="flow-arr">→</div>
+  <div class="flow-box">connector <em>or</em> route</div>
+  <div class="flow-arr">→</div>
+  <div class="flow-box">controller</div>
+  <div class="flow-arr">→</div>
+  <div class="flow-box" style="border-color:var(--blue);">blob_ds</div>
+  <div class="flow-arr">→</div>
+  <div class="flow-box" style="border-color:var(--green);">parser core</div>
+  <div class="flow-arr">→</div>
+  <div class="flow-box" style="border-color:var(--purple);">snapshot_ds</div>
+</div>
+
+<div class="callout c-amber">
+  <div class="ct">Two entry paths to the same controller</div>
+  <strong>Event-driven (production):</strong> The event connector receives <code>workbook.uploaded</code> from <code>rfq_manager_ms</code> and calls the controller directly — no HTTP round-trip. This is the primary production path.<br>
+  <strong>HTTP route (dev / batch / manual):</strong> The <code>POST /parse-workbook</code> route allows manual triggering during development and batch seeding of historical workbooks during the cold-start phase. It calls the same controller.<br>
+  Both paths converge at <code>WorkbookParseController.parse_workbook()</code>. The controller is identical in both cases.
+</div>
+
+<div class="patch">
+<h3>1.4 Response path: controller → translator → route <span class="patch-label">v1.1 fix</span></h3>
+<p>Following BACAB's layered convention, the response flows through the translator before reaching the route:</p>
+<div class="flow-row">
+  <div class="flow-box">controller returns <code>envelope dict</code></div>
+  <div class="flow-arr">→</div>
+  <div class="flow-box" style="border-color:var(--cyan);">translator shapes it</div>
+  <div class="flow-arr">→</div>
+  <div class="flow-box">route returns HTTP response</div>
+</div>
+<p>The translator's job is to convert the internal envelope into the API response shape. In V1, this may be a near-passthrough (the envelope <em>is</em> the response), but the layer exists so that future API versioning or field-level filtering doesn't require touching the controller or the parser.</p>
+<p>For the event-driven path, the translator is <strong>not</strong> involved — the connector calls the controller, receives the raw envelope, and doesn't need an HTTP-shaped response.</p>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- S2: MODULE TREE -->
+<!-- ============================================================ -->
+<h2 id="s2"><span class="n">02</span> Module &amp; File Tree</h2>
+
+<div class="patch">
+<div class="callout c-green">
+  <div class="ct">Impact on existing files <span class="patch-label">v1.1 fix</span></div>
+  No existing business modules (controllers, extractors, models) are modified. The following existing infrastructure files receive <strong>light wiring/config additions only</strong>:
+  <ul>
+    <li><code>config/settings.py</code> — add <code>BLOB_CONTAINER_NAME</code> env var</li>
+    <li><code>app_context.py</code> — wire new controller + datasource instances</li>
+    <li><code>app.py</code> — register new route with <code>app.include_router()</code></li>
+  </ul>
+</div>
+</div>
+
+<div class="tree">
+<span class="dir">src/</span>
+├── <span class="dir">config/</span>
+│   └── <span class="touch">settings.py</span>                          <span class="note"># TOUCHED — add BLOB_CONTAINER_NAME</span>
+├── <span class="dir">connectors/</span>
+│   └── <span class="file">event_connector.py</span>                   <span class="note"># existing — add workbook.uploaded handler</span>
+├── <span class="dir">controllers/</span>
+│   └── <span class="new">workbook_parse_controller.py</span>          <span class="note"># NEW — orchestrates parse flow</span>
+├── <span class="dir">datasources/</span>
+│   ├── <span class="new">blob_datasource.py</span>                    <span class="note"># NEW — downloads from Azure Blob</span>
+│   └── <span class="new">intelligence_snapshot_datasource.py</span>   <span class="note"># NEW — stores parse result</span>
+├── <span class="dir">models/</span>
+│   └── <span class="new">workbook_parse_models.py</span>              <span class="note"># NEW — Pydantic models for schema</span>
+├── <span class="dir">routes/</span>
+│   └── <span class="new">workbook_parse_routes.py</span>              <span class="note"># NEW — POST /parse-workbook (manual/batch)</span>
+├── <span class="dir">translators/</span>
+│   └── <span class="new">workbook_parse_translator.py</span>          <span class="note"># NEW — envelope → API response shape</span>
+│
+├── <span class="dir">parsers/</span>                                    <span class="note"># NEW — parser domain module</span>
+│   └── <span class="dir">workbook/</span>
+│       ├── <span class="new">__init__.py</span>
+│       ├── <span class="new">workbook_parser.py</span>                <span class="note"># Orchestrator: open → validate → extract → assemble</span>
+│       ├── <span class="new">workbook_reader.py</span>                <span class="note"># Abstract reader interface</span>
+│       ├── <span class="new">xls_reader.py</span>                     <span class="note"># xlrd-based implementation of reader</span>
+│       ├── <span class="new">template_matcher.py</span>               <span class="note"># Anchor validation + template identification</span>
+│       │
+│       ├── <span class="dir">extractors/</span>
+│       │   ├── <span class="new">__init__.py</span>
+│       │   ├── <span class="new">general_extractor.py</span>          <span class="note"># General sheet → identity + item rows</span>
+│       │   ├── <span class="new">bid_s_extractor.py</span>            <span class="note"># Bid S → metadata + summary lines</span>
+│       │   └── <span class="new">top_sheet_extractor.py</span>        <span class="note"># Top Sheet → commercial lines + summary</span>
+│       │
+│       ├── <span class="dir">normalizers/</span>
+│       │   ├── <span class="new">__init__.py</span>
+│       │   ├── <span class="new">text_normalizer.py</span>            <span class="note"># trim, whitespace collapse, dash strip</span>
+│       │   ├── <span class="new">value_normalizer.py</span>           <span class="note"># numeric, boolean, date, empty-text</span>
+│       │   └── <span class="new">canonical_keys.py</span>             <span class="note"># Frozen key lookup tables + matching</span>
+│       │
+│       ├── <span class="new">assembler.py</span>                      <span class="note"># Builds WorkbookParseEnvelope from extractor outputs</span>
+│       ├── <span class="new">cross_checker.py</span>                  <span class="note"># Identity + numeric cross-checks</span>
+│       └── <span class="new">diagnostics.py</span>                    <span class="note"># ParserIssue, AnchorCheck, SheetReport builders</span>
+│
+├── <span class="dir">utils/</span>
+├── <span class="touch">app_context.py</span>                            <span class="note"># TOUCHED — wire parser controller + datasources</span>
+└── <span class="touch">app.py</span>                                    <span class="note"># TOUCHED — register new route</span>
+
+<span class="dir">tests/</span>
+├── <span class="dir">parser/</span>
+│   ├── <span class="new">test_xls_reader.py</span>
+│   ├── <span class="new">test_general_extractor.py</span>
+│   ├── <span class="new">test_bid_s_extractor.py</span>
+│   ├── <span class="new">test_top_sheet_extractor.py</span>
+│   ├── <span class="new">test_assembler.py</span>
+│   ├── <span class="new">test_cross_checker.py</span>
+│   └── <span class="new">test_golden_workbook.py</span>               <span class="note"># End-to-end against IF-25144.xls</span>
+└── <span class="dir">fixtures/</span>
+    └── <span class="new">IF-25144.xls</span>                           <span class="note"># Golden reference workbook</span>
+</div>
+
+<p>New files: <strong>22</strong> (14 parser core + 5 BACAB layer + 7 tests). Touched files: <strong>3</strong> (config, app_context, app — light wiring only).</p>
+
+
+<!-- ============================================================ -->
+<!-- S3: WORKBOOK READER -->
+<!-- ============================================================ -->
+<h2 id="s3"><span class="n">03</span> WorkbookReader — The Format Adapter</h2>
+
+<h3>3.1 Why this exists</h3>
+<p>Every extractor calls <code>reader.get_cell(sheet, row, col)</code> — never <code>xlrd</code> directly. When <code>.xlsx</code> support is needed later, you write an <code>XlsxReader</code> that implements the same interface. Zero extractor changes.</p>
+
+<h3>3.2 Interface contract</h3>
+<pre><span class="cmt"># parsers/workbook/workbook_reader.py</span>
+<span class="kw">from</span> abc <span class="kw">import</span> ABC, abstractmethod
+<span class="kw">from</span> typing <span class="kw">import</span> Any, List, Tuple, Optional
+<span class="kw">from</span> datetime <span class="kw">import</span> date
+
+<span class="kw">class</span> <span class="cls">WorkbookReader</span>(ABC):
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">open</span>(self, file_path: str) -> None:
+        <span class="str">"""Open workbook file. Raises WorkbookOpenError on failure."""</span>
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">sheet_names</span>(self) -> List[str]:
+        <span class="str">"""Return all sheet names in workbook order."""</span>
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">has_sheet</span>(self, name: str) -> bool:
+        <span class="str">"""Check if sheet exists."""</span>
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">get_cell_value</span>(self, sheet: str, row: int, col: int) -> Any:
+        <span class="str">"""Return cell value. row/col are 0-indexed."""</span>
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">get_cell_type</span>(self, sheet: str, row: int, col: int) -> str:
+        <span class="str">"""Return normalized type: 'empty','text','number','date','boolean','error','blank'"""</span>
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">get_date_value</span>(self, sheet: str, row: int, col: int) -> Optional[date]:
+        <span class="str">"""Return Python date from Excel serial. Uses correct datemode. Returns None on failure."""</span>
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">get_merged_regions</span>(self, sheet: str) -> List[Tuple[int, int, int, int]]:
+        <span class="str">"""Return list of (row_lo, row_hi, col_lo, col_hi) — 0-indexed."""</span>
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">get_sheet_dimensions</span>(self, sheet: str) -> Tuple[int, int]:
+        <span class="str">"""Return (nrows, ncols)."""</span>
+
+    @abstractmethod
+    <span class="kw">def</span> <span class="fn">close</span>(self) -> None:
+        <span class="str">"""Release resources."""</span></pre>
+
+<h3>3.3 XlsReader — the V1 implementation</h3>
+<pre><span class="cmt"># parsers/workbook/xls_reader.py</span>
+<span class="kw">import</span> xlrd
+<span class="kw">from</span> datetime <span class="kw">import</span> date
+
+<span class="kw">class</span> <span class="cls">XlsReader</span>(WorkbookReader):
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._wb = None
+        self._sheets = {}
+
+    <span class="kw">def</span> <span class="fn">open</span>(self, file_path: str):
+        self._wb = xlrd.open_workbook(file_path, formatting_info=True)
+        <span class="cmt"># Cache sheet objects by name</span>
+        <span class="kw">for</span> name <span class="kw">in</span> self._wb.sheet_names():
+            self._sheets[name] = self._wb.sheet_by_name(name)
+
+    <span class="kw">def</span> <span class="fn">get_cell_type</span>(self, sheet, row, col):
+        TYPE_MAP = {0:<span class="str">'empty'</span>, 1:<span class="str">'text'</span>, 2:<span class="str">'number'</span>, 3:<span class="str">'date'</span>,
+                    4:<span class="str">'boolean'</span>, 5:<span class="str">'error'</span>, 6:<span class="str">'blank'</span>}
+        <span class="kw">return</span> TYPE_MAP[self._sheets[sheet].cell_type(row, col)]
+
+    <span class="kw">def</span> <span class="fn">get_date_value</span>(self, sheet, row, col):
+        val = self._sheets[sheet].cell_value(row, col)
+        ctype = self._sheets[sheet].cell_type(row, col)
+        <span class="kw">if</span> ctype != 3:
+            <span class="kw">return</span> None
+        <span class="kw">try</span>:
+            dt = xlrd.xldate_as_tuple(val, self._wb.datemode)
+            <span class="kw">return</span> date(*dt[:3])
+        <span class="kw">except</span>:
+            <span class="kw">return</span> None
+
+    <span class="cmt"># ... remaining methods wrap xlrd calls similarly</span></pre>
+
+<div class="callout c-green">
+  <div class="ct">Key implementation note</div>
+  <code>formatting_info=True</code> is required in <code>xlrd.open_workbook()</code> to access merged cell regions. This is needed for Bid S (50 merges) and General (24 merges). Without it, merged cell data is unavailable.
+</div>
+
+
+<!-- ============================================================ -->
+<!-- S4: NORMALIZERS -->
+<!-- ============================================================ -->
+<h2 id="s4"><span class="n">04</span> Normalizers — Shared Rules</h2>
+
+<p>Pure functions with no state. Every extractor imports and uses them. They encode the frozen normalization rules from the Implementation Pack v1.1.</p>
+
+<h3>4.1 text_normalizer.py</h3>
+<table>
+  <tr><th>Function</th><th>Input</th><th>Output</th><th>Rule</th></tr>
+  <tr><td><code>normalize_whitespace(s)</code></td><td>any string</td><td>trimmed, collapsed</td><td>Replace \n \t with space, collapse multiple spaces, strip</td></tr>
+  <tr><td><code>strip_leading_dash(s)</code></td><td>normalized label</td><td>label without leading <code>-</code></td><td>If starts with <code>-</code>, remove it and strip. Used only for Top Sheet.</td></tr>
+  <tr><td><code>normalize_for_anchor(s)</code></td><td>raw cell value</td><td>anchor-ready string</td><td><code>normalize_whitespace</code> + lowercase</td></tr>
+</table>
+
+<h3>4.2 value_normalizer.py</h3>
+<table>
+  <tr><th>Function</th><th>Logic</th></tr>
+  <tr><td><code>normalize_numeric(value, cell_type)</code></td><td>number→number, boolean false→0, boolean true→1, blank→None, empty text→None</td></tr>
+  <tr><td><code>normalize_boolean_flag(value, cell_type)</code></td><td>"Yes"→True, "No"→False, blank→None, unexpected→None + returns warning</td></tr>
+  <tr><td><code>normalize_date(reader, sheet, row, col)</code></td><td>Calls <code>reader.get_date_value()</code>, returns ISO string or None</td></tr>
+  <tr><td><code>normalize_revision(value, cell_type)</code></td><td>If numeric and whole, convert to int string: 0.0→"0"</td></tr>
+  <tr><td><code>normalize_text_or_null(value, cell_type)</code></td><td>If text and empty/whitespace → None. Otherwise trim.</td></tr>
+</table>
+
+<h3>4.3 canonical_keys.py</h3>
+<pre><span class="cmt"># Frozen lookup tables from Implementation Pack v1.1</span>
+
+BID_S_CANONICAL_MAP = {
+    <span class="str">"Material"</span>: <span class="str">"material"</span>,
+    <span class="str">"Direct Manhours cost (GHI)"</span>: <span class="str">"direct_manhours_ghi"</span>,
+    <span class="cmt"># ... all 35 entries from frozen table</span>
+    <span class="str">"GRAND TOTAL"</span>: <span class="str">"grand_total"</span>,
+}
+
+TOP_SHEET_CANONICAL_MAP = {
+    <span class="str">"Revenue Normal Work"</span>: <span class="str">"revenue_normal_work"</span>,
+    <span class="cmt"># ... all 62 entries from frozen table</span>
+    <span class="str">"PATAM"</span>: <span class="str">"patam"</span>,
+}
+
+BID_S_SUMMARY_KEYS = {<span class="str">"total_direct_cost"</span>, <span class="str">"total_other_overheads"</span>, <span class="str">"total_gross_cost"</span>,
+                       <span class="str">"gross_price"</span>, <span class="str">"grand_total"</span>}
+
+TOP_SHEET_SUMMARY_KEYS = {<span class="str">"total_revenue"</span>, <span class="str">"total_project_direct_cost"</span>, <span class="str">"contribution_margin"</span>,
+                           <span class="str">"total_project_indirect_cost"</span>, <span class="str">"total_project_cost"</span>,
+                           <span class="str">"gross_profit"</span>, <span class="str">"patam"</span>}
+
+<span class="kw">def</span> <span class="fn">resolve_canonical_key</span>(label_normalized: str, sheet: str) -> Optional[str]:
+    <span class="str">"""Resolve a normalized label to its canonical key. Returns None if unrecognized."""</span>
+    map_ = BID_S_CANONICAL_MAP <span class="kw">if</span> sheet == <span class="str">"Bid S"</span> <span class="kw">else</span> TOP_SHEET_CANONICAL_MAP
+    <span class="kw">return</span> map_.get(label_normalized)
+
+<span class="kw">def</span> <span class="fn">classify_line_kind</span>(canonical_key: str, sheet: str) -> str:
+    <span class="str">"""Return 'summary' or 'detail' based on frozen v1.1 classification."""</span>
+    summary_set = BID_S_SUMMARY_KEYS <span class="kw">if</span> sheet == <span class="str">"Bid S"</span> <span class="kw">else</span> TOP_SHEET_SUMMARY_KEYS
+    <span class="kw">return</span> <span class="str">"summary"</span> <span class="kw">if</span> canonical_key <span class="kw">in</span> summary_set <span class="kw">else</span> <span class="str">"detail"</span></pre>
+
+
+<!-- ============================================================ -->
+<!-- S5: EXTRACTORS -->
+<!-- ============================================================ -->
+<h2 id="s5"><span class="n">05</span> Extractors — One Per Sheet</h2>
+
+<p>Each extractor receives a <code>WorkbookReader</code> instance and returns a typed <code>ExtractionResult</code> plus a list of <code>ParserIssue</code>s. Extractors never know about HTTP, databases, or other sheets.</p>
+
+<h3>5.1 Common extractor interface</h3>
+<pre>@dataclass
+<span class="kw">class</span> <span class="cls">ExtractionResult</span>:
+    data: dict                      <span class="cmt"># sheet-specific output</span>
+    anchor_checks: List[dict]       <span class="cmt"># AnchorCheck objects</span>
+    issues: List[dict]              <span class="cmt"># ParserIssue objects</span>
+    sheet_report: dict              <span class="cmt"># SheetReport object</span>
+    template_match: bool            <span class="cmt"># did hard-fail anchors pass?</span>
+
+<span class="kw">class</span> <span class="cls">BaseExtractor</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, reader: WorkbookReader):
+        self.reader = reader
+        self.issues = []
+        self.anchor_checks = []
+
+    <span class="kw">def</span> <span class="fn">_check_anchor</span>(self, sheet, row, col, expected, hard_fail=False):
+        <span class="str">"""Compare normalized cell value against expected. Record AnchorCheck.
+        If hard_fail and mismatch, append error-severity ParserIssue."""</span>
+
+    <span class="kw">def</span> <span class="fn">_warn</span>(self, code, sheet_name, message, **kwargs):
+        <span class="str">"""Append a ParserIssue with severity='warning'."""</span>
+
+    <span class="kw">def</span> <span class="fn">_error</span>(self, code, sheet_name, message, **kwargs):
+        <span class="str">"""Append a ParserIssue with severity='error'."""</span></pre>
+
+<h3>5.2 GeneralExtractor</h3>
+<table>
+  <tr><th>Step</th><th>What it does</th><th>Output key</th></tr>
+  <tr><td>1. Validate anchors</td><td>Check B2, B4, B5, B7, B11 (hard-fail). Check B6, B8, D11, K11 (soft). Verify D4 not blank.</td><td><code>anchor_checks[]</code></td></tr>
+  <tr><td>2. Extract identity</td><td>Read D4, H4, D5, H5, D6, D7, D8, D9. Normalize each per its type rule.</td><td><code>rfq_identity</code></td></tr>
+  <tr><td>3. Extract item rows</td><td>Scan rows 14:62. Apply inclusion/exclusion filter. Normalize boolean flags (O:V). Normalize revision (C).</td><td><code>general_item_rows[]</code></td></tr>
+  <tr><td>4. Compute summary</td><td><code>item_count</code>, <code>total_qty</code>, <code>total_weight_ton</code> from kept rows.</td><td><code>general_summary</code></td></tr>
+  <tr><td>5. Build SheetReport</td><td>Count rows scanned/kept/skipped, merged regions, warnings, errors.</td><td><code>sheet_report</code></td></tr>
+</table>
+
+<h3>5.3 BidSExtractor</h3>
+<table>
+  <tr><th>Step</th><th>What it does</th><th>Output key</th></tr>
+  <tr><td>1. Validate anchors</td><td>Check B2, F2, B9, B12, E12, B49 (hard-fail). Check remaining (soft).</td><td><code>anchor_checks[]</code></td></tr>
+  <tr><td>2. Extract identity mirror</td><td>Read C2:C6. Trim.</td><td><code>identity_mirror</code></td></tr>
+  <tr><td>3. Extract bid_meta</td><td>Read G2:G7, I8, B10. Normalize dates (G6, I8). Normalize numbers.</td><td><code>bid_meta</code></td></tr>
+  <tr><td>4. Extract summary lines</td><td>Scan rows 14:49. Skip row 36. Read B, D, E:I. Normalize whitespace, bool→0, ratios as-is. Resolve canonical key. Classify section + line_kind.</td><td><code>bid_summary_lines[]</code></td></tr>
+  <tr><td>5. Promote summaries</td><td>Extract rows 35, 43, 44, 45, 46, 47, 48, 49 into <code>BidSummaryMetric</code> objects.</td><td><code>bid_summary</code></td></tr>
+</table>
+
+<h3>5.4 TopSheetExtractor</h3>
+<table>
+  <tr><th>Step</th><th>What it does</th><th>Output key</th></tr>
+  <tr><td>1. Validate anchors</td><td>Check B2, B9, B11, B19, B62 (hard-fail). Check remaining (soft).</td><td><code>anchor_checks[]</code></td></tr>
+  <tr><td>2. Extract identity mirror</td><td>Read C2:C7. Normalize date on C7.</td><td><code>identity_mirror</code></td></tr>
+  <tr><td>3. Extract commercial lines</td><td>Scan rows 11:76. Skip headers/excluded rows. Strip leading dash. Resolve canonical key. Classify section + line_kind. Read C:R (rev00, rev01, periods 1-12).</td><td><code>top_sheet_lines[]</code></td></tr>
+  <tr><td>4. Promote summaries</td><td>Extract rows 18, 60, 61, 70, 71, 72, 73, 74, 75, 76 into <code>TopSheetMetric</code> objects.</td><td><code>top_sheet_summary</code></td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<!-- S6: ASSEMBLER -->
+<!-- ============================================================ -->
+<h2 id="s6"><span class="n">06</span> Assembler — Building the Envelope</h2>
+
+<p>The assembler is a pure function that takes the three <code>ExtractionResult</code> objects and produces the complete <code>WorkbookParseEnvelope</code>. It contains no parsing logic — only structural composition.</p>
+
+<div class="patch">
+<h3>6.1 Complete envelope assembly <span class="patch-label">v1.1 fix — schema-aligned</span></h3>
+<pre><span class="cmt"># parsers/workbook/assembler.py</span>
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime
+
+<span class="cmt"># Template identifier — neutral, no sheet count encoded</span>
+TEMPLATE_NAME = <span class="str">"ghi_estimation_workbook_v1"</span>
+PARSER_VERSION = <span class="str">"workbook-parser-v1.1"</span>
+
+<span class="kw">def</span> <span class="fn">assemble_envelope</span>(
+    rfq_id: str,
+    file_name: str,
+    blob_path: str,
+    general_result: ExtractionResult,
+    bid_s_result: ExtractionResult,
+    top_sheet_result: ExtractionResult,
+    cross_checks: List[dict],
+) -> dict:
+
+    <span class="cmt"># Collect all issues across sheets</span>
+    all_issues = general_result.issues + bid_s_result.issues + top_sheet_result.issues
+    all_warnings = [i <span class="kw">for</span> i <span class="kw">in</span> all_issues <span class="kw">if</span> i[<span class="str">"severity"</span>] == <span class="str">"warning"</span>]
+    all_errors = [i <span class="kw">for</span> i <span class="kw">in</span> all_issues <span class="kw">if</span> i[<span class="str">"severity"</span>] == <span class="str">"error"</span>]
+
+    <span class="cmt"># Determine overall status</span>
+    <span class="kw">if</span> all_errors <span class="kw">or not</span> all(r.template_match <span class="kw">for</span> r <span class="kw">in</span> [general_result, bid_s_result, top_sheet_result]):
+        status = <span class="str">"failed"</span>
+    <span class="kw">elif</span> all_warnings:
+        status = <span class="str">"parsed_with_warnings"</span>
+    <span class="kw">else</span>:
+        status = <span class="str">"parsed_ok"</span>
+
+    <span class="kw">return</span> {
+        <span class="cmt"># ── Envelope metadata (all schema-required fields present) ──</span>
+        <span class="str">"rfq_id"</span>: rfq_id,
+        <span class="str">"template_name"</span>: TEMPLATE_NAME,
+        <span class="str">"workbook_format"</span>: <span class="str">"xls"</span>,
+        <span class="str">"workbook_file_name"</span>: file_name,
+        <span class="str">"workbook_blob_path"</span>: blob_path,
+        <span class="str">"template_match"</span>: all(r.template_match <span class="kw">for</span> r <span class="kw">in</span> [general_result, bid_s_result, top_sheet_result]),
+        <span class="str">"parsed_at"</span>: datetime.utcnow().isoformat() + <span class="str">"Z"</span>,
+        <span class="str">"parser_version"</span>: PARSER_VERSION,
+
+        <span class="cmt"># ── workbook_profile ──</span>
+        <span class="str">"workbook_profile"</span>: {
+            <span class="str">"rfq_identity"</span>: general_result.data[<span class="str">"rfq_identity"</span>],
+            <span class="str">"identity_mirrors"</span>: {
+                <span class="str">"bid_s"</span>: bid_s_result.data[<span class="str">"identity_mirror"</span>],
+                <span class="str">"top_sheet"</span>: top_sheet_result.data[<span class="str">"identity_mirror"</span>],
+            },
+            <span class="str">"general_item_rows"</span>: general_result.data[<span class="str">"general_item_rows"</span>],
+            <span class="str">"general_summary"</span>: general_result.data[<span class="str">"general_summary"</span>],
+            <span class="str">"bid_meta"</span>: bid_s_result.data[<span class="str">"bid_meta"</span>],
+        },
+
+        <span class="cmt"># ── cost_breakdown_profile ──</span>
+        <span class="str">"cost_breakdown_profile"</span>: {
+            <span class="str">"bid_summary_lines"</span>: bid_s_result.data[<span class="str">"bid_summary_lines"</span>],
+            <span class="str">"bid_summary"</span>: bid_s_result.data[<span class="str">"bid_summary"</span>],
+            <span class="str">"top_sheet_lines"</span>: top_sheet_result.data[<span class="str">"top_sheet_lines"</span>],
+            <span class="str">"top_sheet_summary"</span>: top_sheet_result.data[<span class="str">"top_sheet_summary"</span>],
+        },
+
+        <span class="cmt"># ── parser_report ──</span>
+        <span class="str">"parser_report"</span>: {
+            <span class="str">"status"</span>: status,
+            <span class="str">"parsed_sheets"</span>: [<span class="str">"General"</span>, <span class="str">"Bid S"</span>, <span class="str">"Top Sheet"</span>],
+            <span class="str">"skipped_sheets"</span>: [],
+            <span class="str">"warnings"</span>: all_warnings,
+            <span class="str">"errors"</span>: all_errors,
+            <span class="str">"anchor_checks"</span>: (general_result.anchor_checks
+                              + bid_s_result.anchor_checks
+                              + top_sheet_result.anchor_checks),
+            <span class="str">"cross_checks"</span>: cross_checks,
+            <span class="str">"sheet_reports"</span>: {
+                <span class="str">"general"</span>: general_result.sheet_report,
+                <span class="str">"bid_s"</span>: bid_s_result.sheet_report,
+                <span class="str">"top_sheet"</span>: top_sheet_result.sheet_report,
+            },
+        },
+    }</pre>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- S7: CROSS CHECKER -->
+<!-- ============================================================ -->
+<h2 id="s7"><span class="n">07</span> Cross-Checker</h2>
+
+<pre><span class="cmt"># parsers/workbook/cross_checker.py</span>
+
+<span class="kw">def</span> <span class="fn">run_cross_checks</span>(general_data, bid_s_data, top_sheet_data) -> List[dict]:
+    checks = []
+
+    <span class="cmt"># Identity exact checks (10 total: 5 Gen↔BidS + 5 Gen↔TopSheet)</span>
+    <span class="kw">for</span> field <span class="kw">in</span> [<span class="str">"inquiry_no"</span>, <span class="str">"client_name"</span>, <span class="str">"client_inquiry_no"</span>, <span class="str">"subject"</span>, <span class="str">"project_name"</span>]:
+        checks.append(<span class="fn">exact_check</span>(
+            code=f<span class="str">"GENERAL_vs_BID_S_{field.upper()}"</span>,
+            left=general_data[<span class="str">"rfq_identity"</span>][field],
+            right=bid_s_data[<span class="str">"identity_mirror"</span>][field],
+        ))
+        checks.append(<span class="fn">exact_check</span>(
+            code=f<span class="str">"GENERAL_vs_TOP_SHEET_{field.upper()}"</span>,
+            left=general_data[<span class="str">"rfq_identity"</span>][field],
+            right=top_sheet_data[<span class="str">"identity_mirror"</span>][field],
+        ))
+
+    <span class="cmt"># Numeric tolerance checks (6 total, per v1.1 cross-check table)</span>
+    checks.append(<span class="fn">numeric_check</span>(<span class="str">"GENERAL_TOTAL_WEIGHT_vs_BID_S_TOTAL_WEIGHT"</span>, ...))
+    checks.append(<span class="fn">numeric_check</span>(<span class="str">"TOP_SHEET_TOTAL_REVENUE_vs_BID_S_GRAND_TOTAL"</span>, ..., tolerance_rel=0.0001))
+    checks.append(<span class="fn">numeric_check</span>(<span class="str">"TOP_SHEET_FINANCIAL_CHARGES_vs_BID_S_FINANCIAL_CHARGES"</span>, ...))
+    checks.append(<span class="fn">numeric_check</span>(<span class="str">"TOP_SHEET_ESCALATION_vs_BID_S_ESCALATION"</span>, ...))
+    checks.append(<span class="fn">numeric_check</span>(<span class="str">"TOP_SHEET_NEGOTIATION_vs_BID_S_NEGOTIATION"</span>, ...))
+    checks.append(<span class="fn">numeric_check</span>(<span class="str">"TOP_SHEET_DIRECT_COST_vs_BID_S_TOTAL_DIRECT_COST"</span>, ..., severity=<span class="str">"info"</span>))
+
+    <span class="kw">return</span> checks</pre>
+
+
+<!-- ============================================================ -->
+<!-- S8: CONTROLLER -->
+<!-- ============================================================ -->
+<h2 id="s8"><span class="n">08</span> Controller — The Orchestrator</h2>
+
+<p>Following BACAB's golden rule: the controller contains all business logic and orchestration. It never knows about HTTP. It calls datasources for data access and the parser module for domain logic. It returns the raw envelope dict — the translator handles shaping it for the API.</p>
+
+<pre><span class="cmt"># controllers/workbook_parse_controller.py</span>
+
+<span class="kw">class</span> <span class="cls">WorkbookParseController</span>:
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, blob_datasource, snapshot_datasource):
+        self.blob_ds = blob_datasource
+        self.snapshot_ds = snapshot_datasource
+
+    <span class="kw">def</span> <span class="fn">parse_workbook</span>(self, rfq_id: str, blob_path: str, file_name: str) -> dict:
+        <span class="str">"""
+        Full orchestration:
+        1. Download workbook from blob storage
+        2. Open with WorkbookReader
+        3. Run template validation
+        4. Run all 3 extractors (General → Bid S → Top Sheet)
+        5. Run cross-checks
+        6. Assemble final envelope
+        7. Store snapshot
+        8. Return raw envelope dict
+        """</span>
+
+        <span class="cmt"># Step 1: Download</span>
+        local_path = self.blob_ds.download_workbook(blob_path)
+
+        <span class="cmt"># Step 2: Open reader</span>
+        reader = XlsReader()
+        reader.open(local_path)
+
+        <span class="kw">try</span>:
+            <span class="cmt"># Step 3: Template check</span>
+            matcher = TemplateMatcher(reader)
+            <span class="kw">if not</span> matcher.is_ghi_template():
+                <span class="kw">return</span> self._build_failed_envelope(rfq_id, file_name, blob_path, <span class="str">"Template mismatch"</span>)
+
+            <span class="cmt"># Step 4: Extract — strict order: General first (primary identity)</span>
+            general_result = GeneralExtractor(reader).extract()
+            bid_s_result = BidSExtractor(reader).extract()
+            top_sheet_result = TopSheetExtractor(reader).extract()
+
+            <span class="cmt"># Step 5: Cross-checks</span>
+            cross_checks = run_cross_checks(
+                general_result.data, bid_s_result.data, top_sheet_result.data
+            )
+
+            <span class="cmt"># Step 6: Assemble</span>
+            envelope = assemble_envelope(
+                rfq_id, file_name, blob_path,
+                general_result, bid_s_result, top_sheet_result,
+                cross_checks,
+            )
+
+            <span class="cmt"># Step 7: Store</span>
+            self.snapshot_ds.save_parse_result(rfq_id, envelope)
+
+            <span class="cmt"># Step 8: Return raw envelope (translator shapes this for HTTP)</span>
+            <span class="kw">return</span> envelope
+
+        <span class="kw">finally</span>:
+            reader.close()</pre>
+
+
+<!-- ============================================================ -->
+<!-- S9: INTEGRATION POINT -->
+<!-- ============================================================ -->
+<h2 id="s9"><span class="n">09</span> Integration with <code>workbook.uploaded</code></h2>
+
+<h3>9.1 Two entry paths</h3>
+<table>
+  <tr><th>Path</th><th>Layer</th><th>File</th><th>How it reaches the controller</th></tr>
+  <tr>
+    <td><span class="tag t-green">Event-driven (production)</span></td>
+    <td>Connector</td>
+    <td><code>event_connector.py</code></td>
+    <td>Subscribes to <code>workbook.uploaded</code> from <code>rfq_manager_ms</code>. Extracts <code>rfq_id</code>, <code>blob_path</code>, <code>file_name</code> from event payload. Calls <code>controller.parse_workbook()</code> directly — no HTTP round-trip. Translator is <strong>not</strong> involved.</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-amber">HTTP route (dev / batch)</span></td>
+    <td>Route</td>
+    <td><code>workbook_parse_routes.py</code></td>
+    <td>Exposes <code>POST /rfq-intelligence/v1/parse-workbook</code> for manual triggering during development and batch seeding of historical workbooks. Calls same controller. Response passes through <strong>translator</strong> before returning.</td>
+  </tr>
+</table>
+
+<div class="patch">
+<h3>9.2 Route with translator in the response path <span class="patch-label">v1.1 fix</span></h3>
+<pre><span class="cmt"># routes/workbook_parse_routes.py</span>
+<span class="kw">from</span> fastapi <span class="kw">import</span> APIRouter
+<span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+
+router = APIRouter(prefix=<span class="str">"/rfq-intelligence/v1"</span>, tags=[<span class="str">"workbook-parser"</span>])
+
+<span class="kw">class</span> <span class="cls">ParseWorkbookRequest</span>(BaseModel):
+    rfq_id: str
+    blob_path: str
+    file_name: str
+
+@router.post(<span class="str">"/parse-workbook"</span>)
+<span class="kw">def</span> <span class="fn">parse_workbook</span>(req: ParseWorkbookRequest):
+    controller = get_workbook_parse_controller()   <span class="cmt"># from app_context</span>
+    translator = get_workbook_parse_translator()   <span class="cmt"># from app_context</span>
+
+    <span class="cmt"># Controller returns raw envelope dict</span>
+    envelope = controller.parse_workbook(req.rfq_id, req.blob_path, req.file_name)
+
+    <span class="cmt"># Translator shapes it for API response</span>
+    <span class="kw">return</span> translator.to_response(envelope)</pre>
+
+<pre><span class="cmt"># translators/workbook_parse_translator.py</span>
+
+<span class="kw">class</span> <span class="cls">WorkbookParseTranslator</span>:
+    <span class="kw">def</span> <span class="fn">to_response</span>(self, envelope: dict) -> dict:
+        <span class="str">"""Convert internal envelope to API response shape.
+        In V1 this is a near-passthrough. The layer exists so that future
+        API versioning, field filtering, or response pagination can be
+        added here without touching the controller or parser."""</span>
+        <span class="kw">return</span> envelope</pre>
+</div>
+
+<h3>9.3 Batch seeding for cold start</h3>
+<p>The HTTP route supports historical batch seeding — iterate over a list of past workbook blob paths and POST each one. This is the cold start strategy from the architecture brief: feed 20–50 historical workbooks through the parser to populate the intelligence database before any live RFQ arrives.</p>
+
+
+<!-- ============================================================ -->
+<!-- S10: TEST PLAN -->
+<!-- ============================================================ -->
+<h2 id="s10"><span class="n">10</span> Test Plan</h2>
+
+<div class="callout c-blue">
+  <div class="ct">Golden workbook strategy</div>
+  <code>IF-25144.xls</code> is the reference workbook. All tests validate against its known values. This is a single-workbook test suite. Multi-workbook robustness testing happens when GHI provides additional historical files.
+</div>
+
+<h3>10.1 Test matrix</h3>
+<table>
+  <tr><th>Test file</th><th>What it validates</th><th>Key assertions</th></tr>
+  <tr>
+    <td><code>test_xls_reader.py</code></td>
+    <td>Reader interface works</td>
+    <td>Opens workbook. Returns correct sheet names list. Reads known cell values. Returns correct types. Reads dates via datemode. Returns merged regions. Sheet dimensions match expectations.</td>
+  </tr>
+  <tr>
+    <td><code>test_general_extractor.py</code></td>
+    <td>General extraction</td>
+    <td>Identity: inquiry_no = "IF-25144", client = "Al Bawani Group", date = "2025-08-26". Items: 1 kept, 48 dropped. Row 14: tag = "K18-D-0003", qty = 1, weight ≈ 10.249. Boolean flags: pwht=false, asme_stamp=true. Summary: computed totals match.</td>
+  </tr>
+  <tr>
+    <td><code>test_bid_s_extractor.py</code></td>
+    <td>Bid S extraction</td>
+    <td>35 canonical keys resolved, 0 unmatched. Metadata: exchange_rate = 3.75, delivery = "36 Weeks". E38 boolean→0. Grand total ≈ 971150 SAR. Promoted summaries match expected rows. Line kind: 5 summary, 30 detail.</td>
+  </tr>
+  <tr>
+    <td><code>test_top_sheet_extractor.py</code></td>
+    <td>Top Sheet extraction</td>
+    <td>62 canonical keys resolved, 0 unmatched. Dash stripping works. PATAM rev00_value ≈ 77692. Period columns for row 12 match known values. C45 boolean→0. Empty text in column F → null. Line kind: 7 summary, 55 detail.</td>
+  </tr>
+  <tr>
+    <td><code>test_cross_checker.py</code></td>
+    <td>Cross-check logic</td>
+    <td>10 identity checks pass. Weight check: delta = 0. Revenue vs grand total: delta ≈ 7.48. Direct cost check: delta ≈ 59253, severity = info.</td>
+  </tr>
+  <tr>
+    <td><code>test_assembler.py</code></td>
+    <td>Envelope structure</td>
+    <td>All top-level keys present including <code>workbook_format</code>, <code>workbook_file_name</code>, <code>workbook_blob_path</code>. Template name = <code>"ghi_estimation_workbook_v1"</code>. Nested paths resolve. 3 sheet reports. Status logic correct.</td>
+  </tr>
+  <tr>
+    <td><code>test_golden_workbook.py</code></td>
+    <td>End-to-end integration</td>
+    <td>Full parse of IF-25144.xls produces correct <code>WorkbookParseEnvelope</code>. Validates entire output against expected JSON snapshot. This is the acceptance test.</td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<!-- S11: IMPLEMENTATION SEQUENCE -->
+<!-- ============================================================ -->
+<h2 id="s11"><span class="n">11</span> Implementation Sequence</h2>
+
+<div class="callout c-green">
+  <div class="ct">Ordering principle</div>
+  Each step produces a testable output. No step depends on anything not yet built. Strictly linear — no parallelization needed for a single developer.
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 1 — Parser infrastructure</div>
+  <h4>Step 9: Create module skeleton</h4>
+  <p>Create all directories and empty <code>__init__.py</code> files. Create <code>workbook_reader.py</code> abstract interface. Verify import structure.</p>
+  <p><strong>Deliverable:</strong> <code>from parsers.workbook.workbook_reader import WorkbookReader</code> succeeds.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 1 — continued</div>
+  <h4>Step 10: Implement XlsReader + normalizers</h4>
+  <p>Implement <code>xls_reader.py</code> with all <code>WorkbookReader</code> methods. Implement all 3 normalizer files. Write <code>test_xls_reader.py</code>.</p>
+  <p><strong>Deliverable:</strong> Can open IF-25144.xls, read any cell, get types, get dates, list merged regions. All normalizer functions pass pure unit tests.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 2 — Sheet extractors</div>
+  <h4>Step 11: Implement GeneralExtractor</h4>
+  <p>Implement <code>general_extractor.py</code>, <code>template_matcher.py</code>, <code>diagnostics.py</code>. Write <code>test_general_extractor.py</code>.</p>
+  <p><strong>Deliverable:</strong> <code>GeneralExtractor(reader).extract()</code> produces correct identity, 1 item row, computed summary. All anchors pass.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 2 — continued</div>
+  <h4>Step 12: Implement BidSExtractor</h4>
+  <p>Implement <code>bid_s_extractor.py</code>. Implement <code>canonical_keys.py</code> with Bid S table. Write <code>test_bid_s_extractor.py</code>.</p>
+  <p><strong>Deliverable:</strong> 35/35 canonical keys match. Metadata, summary lines, promoted summaries all correct.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 2 — continued</div>
+  <h4>Step 13: Implement TopSheetExtractor</h4>
+  <p>Add Top Sheet entries to <code>canonical_keys.py</code>. Implement <code>top_sheet_extractor.py</code>. Write <code>test_top_sheet_extractor.py</code>.</p>
+  <p><strong>Deliverable:</strong> 62/62 canonical keys match. Rev00/rev01 columns correct. Period columns correct. Dash stripping works.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 3 — Assembly</div>
+  <h4>Step 14: Assembler + cross-checker + golden test</h4>
+  <p>Implement <code>assembler.py</code> (with all schema-required envelope fields), <code>cross_checker.py</code>. Write <code>test_assembler.py</code>, <code>test_cross_checker.py</code>, <code>test_golden_workbook.py</code>.</p>
+  <p><strong>Deliverable:</strong> Full end-to-end parse of IF-25144.xls produces correct <code>WorkbookParseEnvelope</code>. All cross-checks emit correct statuses. Golden test passes.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 4 — Integration</div>
+  <h4>Step 15: Wire into rfq_intelligence_ms</h4>
+  <p>Create BACAB layer files: route, controller, translator, 2 datasources. Update <code>app_context.py</code> (wire instances), <code>app.py</code> (register route), <code>settings.py</code> (add blob config).</p>
+  <p><strong>Deliverable:</strong> <code>POST /rfq-intelligence/v1/parse-workbook</code> returns the complete envelope through the translator. Parser is production-usable for both manual triggering and event-driven flow.</p>
+</div>
+
+
+<div class="divider"></div>
+
+<h2><span class="n">A</span> Appendix — Dependencies</h2>
+<table>
+  <tr><th>Package</th><th>Version</th><th>Purpose</th></tr>
+  <tr><td><code>xlrd</code></td><td>≥ 2.0.1</td><td>.xls (BIFF) workbook reading</td></tr>
+  <tr><td><code>pydantic</code></td><td>existing</td><td>Request/response models</td></tr>
+  <tr><td><code>fastapi</code></td><td>existing</td><td>Route definitions</td></tr>
+  <tr><td><code>azure-storage-blob</code></td><td>existing or add</td><td>Blob download in datasource</td></tr>
+  <tr><td><code>pytest</code></td><td>existing</td><td>Test runner</td></tr>
+</table>
+<p>No new heavy dependencies. <code>xlrd</code> is the only parser-specific addition (~150KB).</p>
+
+
+<div class="divider"></div>
+
+<h2 id="patches"><span class="n">B</span> Appendix — v1.1 Patch Log</h2>
+
+<p>All patches applied based on the Step 8 review. Each is marked inline with <span class="patch-label">v1.1 fix</span> throughout this document.</p>
+
+<table>
+  <tr><th>#</th><th>Issue</th><th>What changed</th><th>Sections affected</th></tr>
+  <tr>
+    <td>1</td>
+    <td><strong>Template identifier cleanup</strong></td>
+    <td>Replaced <code>ghi_workbook_v1_xls_32sheet</code> with neutral <code>ghi_estimation_workbook_v1</code>. No sheet count encoded in the identifier. Test assertions updated — reader test checks sheet_names() list rather than asserting a hardcoded count.</td>
+    <td>§6 Assembler, §10 Tests</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td><strong>Assembler envelope alignment</strong></td>
+    <td>Added missing schema-required fields to assembler output: <code>workbook_format</code>, <code>workbook_file_name</code>, <code>workbook_blob_path</code>. Added explicit <code>parser_version</code> and <code>template_name</code> constants. Added full status-determination logic.</td>
+    <td>§6 Assembler</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td><strong>Translator in the response path</strong></td>
+    <td>Route now calls translator before returning HTTP response. Translator class defined with <code>to_response()</code> method. Event-driven path explicitly documented as bypassing the translator. V1 translator is a near-passthrough; the layer exists for future versioning.</td>
+    <td>§1 Context, §9 Integration</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td><strong>"No existing files modified" wording</strong></td>
+    <td>Replaced with accurate statement: "No existing business modules are modified. Three infrastructure files (<code>settings.py</code>, <code>app_context.py</code>, <code>app.py</code>) receive light wiring/config additions only." File tree now uses distinct <span class="touch">TOUCHED</span> markers instead of marking them as unchanged.</td>
+    <td>§2 Module Tree</td>
+  </tr>
+</table>
+
+<div class="callout c-amber">
+  <div class="ct">What comes after Step 15</div>
+  Once the parser is integrated and the golden test passes: (1) batch-seed historical workbooks to populate the intelligence database, (2) add extraction maps for the remaining 6 Group 1b sheets (Cash Flow, Bid Appr, Price Sheet, Mat Break-up, Material Csot Summary, B-O-Q), (3) begin Pipeline P2 (Historical Matching) which consumes the structured JSON this parser produces.
+</div>
+
+<div class="callout c-purple">
+  <div class="ct">Implementation Pack v1.1 needs a corresponding template_name patch</div>
+  The Implementation Pack v1.1 document still references <code>ghi_workbook_v1_xls_32sheet</code> in its JSON skeleton and schema description. That document should also be patched to use <code>ghi_estimation_workbook_v1</code> for full consistency. This is a find-and-replace — no structural change.
+</div>
+
+</div>
+</body>
+</html>
