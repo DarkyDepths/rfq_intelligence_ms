@@ -88,7 +88,8 @@ class Artifact(Base):
     rfq_id = Column(GUID(), nullable=False, index=True)
     artifact_type = Column(String, nullable=False, index=True)
     # One of: rfq_intake_profile, intelligence_briefing, workbook_profile,
-    #         workbook_review_report, rfq_intelligence_snapshot, rfq_analytical_record
+    #         cost_breakdown_profile, parser_report, workbook_review_report,
+    #         rfq_intelligence_snapshot, rfq_analytical_record
     version = Column(Integer, nullable=False, default=1)
     status = Column(String, nullable=False, default="pending")
     # One of: pending, partial, complete, failed

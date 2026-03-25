@@ -47,15 +47,20 @@ class SnapshotService:
         intake_artifact = current_artifacts.get("rfq_intake_profile")
         briefing_artifact = current_artifacts.get("intelligence_briefing")
         workbook_profile_artifact = current_artifacts.get("workbook_profile")
+        cost_breakdown_artifact = current_artifacts.get("cost_breakdown_profile")
+        parser_report_artifact = current_artifacts.get("parser_report")
         workbook_review_artifact = current_artifacts.get("workbook_review_report")
         analytical_artifact = current_artifacts.get("rfq_analytical_record")
 
         intake_content = intake_artifact.content if intake_artifact else {}
         briefing_content = briefing_artifact.content if briefing_artifact else {}
         workbook_profile_content = workbook_profile_artifact.content if workbook_profile_artifact else {}
+        parser_report_content = parser_report_artifact.content if parser_report_artifact else {}
         workbook_review_content = workbook_review_artifact.content if workbook_review_artifact else {}
         analytical_content = analytical_artifact.content if analytical_artifact else {}
         outcome_enrichment = analytical_content.get("outcome_enrichment") or {}
+        parser_report_payload = parser_report_content.get("parser_report") or {}
+        parser_status = parser_report_payload.get("status")
 
         intake_available = intake_artifact is not None
         briefing_available = briefing_artifact is not None
@@ -66,6 +71,8 @@ class SnapshotService:
             "rfq_intake_profile": "available" if intake_available else "not_ready",
             "intelligence_briefing": "available" if briefing_available else "not_ready",
             "workbook_profile": "available" if workbook_profile_artifact else "not_ready",
+            "cost_breakdown_profile": "available" if cost_breakdown_artifact else "not_ready",
+            "parser_report": "available" if parser_report_artifact else "not_ready",
             "workbook_review_report": "available" if workbook_review_artifact else "not_ready",
             "rfq_analytical_record": "available" if analytical_available else "not_ready",
             "benchmarking": "insufficient_historical_base",
@@ -107,12 +114,16 @@ class SnapshotService:
                 ),
                 "template_recognition": workbook_profile_content.get("template_recognition"),
                 "pairing_validation": workbook_profile_content.get("pairing_validation"),
+                "parser_status": parser_status,
+                "parser_failure": parser_report_payload.get("failure"),
             },
             "review_panel": {
                 "status": workbook_review_artifact.status if workbook_review_artifact else "not_ready",
                 "reason": (
                     None
                     if workbook_review_artifact
+                    else "Workbook parser failed; review report was not generated."
+                    if parser_status == "failed"
                     else "No workbook review is available before workbook.uploaded."
                 ),
                 "active_findings_count": (
