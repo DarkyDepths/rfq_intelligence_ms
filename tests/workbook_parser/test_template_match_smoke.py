@@ -30,3 +30,9 @@ def test_template_matcher_smoke_for_v11_first_pack():
     assert "Top Sheet" in checked_sheets
 
     assert result.template_match is True
+    assert len(result.anchor_checks) >= 40
+
+    error_codes = {issue.code for issue in result.issues if issue.severity == "error"}
+    assert "GENERAL_MISSING_REQUIRED_SHEET" not in error_codes
+    assert "BID_S_MISSING_REQUIRED_SHEET" not in error_codes
+    assert "TOP_SHEET_MISSING_REQUIRED_SHEET" not in error_codes
