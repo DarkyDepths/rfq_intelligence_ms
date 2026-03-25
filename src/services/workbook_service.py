@@ -4,7 +4,7 @@ workbook_service.py — Workbook Parsing Service
 BACAB Layer: Service (domain logic, called by controllers and event handlers)
 
 Responsibility:
-    Parses the GHI estimation workbook (36-sheet fixed template) and produces
+    Parses the GHI estimation workbook (deterministic fixed template) and produces
     the workbook_profile artifact. The cleanest V1 artifact because the
     workbook template is fixed and deterministic to parse.
 

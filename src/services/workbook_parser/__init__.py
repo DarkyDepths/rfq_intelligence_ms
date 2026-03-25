@@ -1,4 +1,4 @@
-"""Deterministic parser helpers for the V1 workbook vertical slice."""
+"""Deterministic workbook parser package (Step 9 skeleton)."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from typing import Any
 
 import xlrd
 
-
-EXPECTED_SHEET_COUNT = 36
+from src.services.workbook_parser.assembler import PARSER_VERSION, TEMPLATE_NAME
+from src.services.workbook_parser.parser_orchestrator import WorkbookParserOrchestrator
 
 
 def compute_structure(expected_sheet_names: list[str], actual_sheet_names: list[str]) -> dict[str, Any]:
@@ -31,82 +31,68 @@ def parse_workbook_deterministic(
     workbook_path: str,
     expected_sheet_names: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Parse workbook using deterministic, template-oriented extraction."""
+    """Compatibility entrypoint retained for existing WorkbookService flow."""
     path = Path(workbook_path)
     if not path.exists():
         raise FileNotFoundError(f"Workbook file not found: {workbook_path}")
 
-    workbook = xlrd.open_workbook(path.as_posix())
+    workbook = xlrd.open_workbook(path.as_posix(), formatting_info=True)
     sheet_names = workbook.sheet_names()
 
-    if expected_sheet_names:
-        structure = compute_structure(expected_sheet_names, sheet_names)
-    else:
-        structure = {
-            "expected_sheet_count": EXPECTED_SHEET_COUNT,
-            "sheet_count_found": len(sheet_names),
-            "missing_sheets": [],
-            "extra_sheets": [],
-        }
+    expected = expected_sheet_names or ["General", "Bid S", "Top Sheet"]
+    structure = compute_structure(expected_sheet_names=expected, actual_sheet_names=sheet_names)
 
-    recognition_status = (
-        "matched"
-        if structure["sheet_count_found"] == EXPECTED_SHEET_COUNT and not structure["missing_sheets"]
-        else "partial"
+    orchestrator = WorkbookParserOrchestrator()
+    envelope = orchestrator.parse(
+        workbook_path=workbook_path,
+        rfq_id="RFQ-UNKNOWN",
+        workbook_file_name=path.name,
+        workbook_blob_path=None,
     )
-
-    workbook_summary = {
-        "sheet_names": sheet_names,
-        "sheet_count_found": structure["sheet_count_found"],
-        "expected_sheet_count": structure["expected_sheet_count"],
-        "missing_sheets": structure["missing_sheets"],
-        "extra_sheets": structure["extra_sheets"],
-    }
-
-    high_value = _extract_high_value_cells(workbook)
 
     return {
         "template_recognition": {
-            "template_family": "ghi_estimation_workbook",
+            "template_family": TEMPLATE_NAME,
             "sheet_count_found": structure["sheet_count_found"],
             "expected_sheet_count": structure["expected_sheet_count"],
-            "recognition_status": recognition_status,
-            "recognition_notes": (
-                "Expected sheet names were not provided; recognition based on sheet-count heuristic."
-                if not expected_sheet_names
-                else "Recognition used expected sheet-name comparison."
-            ),
+            "recognition_status": "matched" if envelope["template_match"] else "partial",
+            "recognition_notes": "Recognition uses required sheet and anchor validation for General/Bid S/Top Sheet.",
+            "parser_version": PARSER_VERSION,
         },
-        "workbook_structure": workbook_summary,
-        "high_value_extracts": high_value,
+        "workbook_structure": {
+            "sheet_names": sheet_names,
+            "sheet_count_found": structure["sheet_count_found"],
+            "expected_sheet_count": structure["expected_sheet_count"],
+            "missing_sheets": structure["missing_sheets"],
+            "extra_sheets": structure["extra_sheets"],
+        },
+        "high_value_extracts": _extract_high_value_cells(workbook),
+        "workbook_parse_envelope": envelope,
     }
 
 
 def _extract_high_value_cells(workbook: xlrd.book.Book) -> dict[str, Any]:
-    """Extract conservative workbook facts without claiming full semantic parsing."""
     text_hits: list[dict[str, Any]] = []
     numeric_hits: list[dict[str, Any]] = []
-
     keywords = ["total", "currency", "project", "client", "delivery", "lead"]
 
     for sheet in workbook.sheets():
         max_rows = min(sheet.nrows, 120)
         max_cols = min(sheet.ncols, 20)
 
-        for r in range(max_rows):
-            for c in range(max_cols):
-                value = sheet.cell_value(r, c)
+        for row in range(max_rows):
+            for col in range(max_cols):
+                value = sheet.cell_value(row, col)
                 if isinstance(value, str):
                     normalized = value.strip()
                     if not normalized:
                         continue
-                    lower = normalized.lower()
-                    if any(k in lower for k in keywords):
+                    if any(token in normalized.lower() for token in keywords):
                         text_hits.append(
                             {
                                 "sheet": sheet.name,
-                                "row": r,
-                                "col": c,
+                                "row": row,
+                                "col": col,
                                 "text": normalized[:200],
                             }
                         )
@@ -115,8 +101,8 @@ def _extract_high_value_cells(workbook: xlrd.book.Book) -> dict[str, Any]:
                         numeric_hits.append(
                             {
                                 "sheet": sheet.name,
-                                "row": r,
-                                "col": c,
+                                "row": row,
+                                "col": col,
                                 "value": float(value),
                             }
                         )
@@ -125,3 +111,6 @@ def _extract_high_value_cells(workbook: xlrd.book.Book) -> dict[str, Any]:
         "text_hits": text_hits[:120],
         "numeric_sample": numeric_hits,
     }
+
+
+__all__ = ["WorkbookParserOrchestrator", "compute_structure", "parse_workbook_deterministic"]

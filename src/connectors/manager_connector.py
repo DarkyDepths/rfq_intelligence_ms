@@ -114,7 +114,7 @@ class ManagerConnector:
         if workbook_ref and Path(workbook_ref).exists():
             return Path(workbook_ref).resolve()
 
-        default_path = self._local_fixtures_root() / "workbook_uploaded" / "workbook_sample_001" / "ghi_workbook_36_sheets.xls"
+        default_path = self._local_fixtures_root() / "workbook_uploaded" / "workbook_sample_001" / "ghi_workbook_32_sheets.xls"
         if workbook_ref.startswith("local://") and default_path.exists():
             return default_path
         if default_path.exists():

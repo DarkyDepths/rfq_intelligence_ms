@@ -67,7 +67,7 @@ def _workbook_uploaded_event(rfq_id: str, event_id: str = "evt-workbook-uploaded
         "payload": {
             "rfq_id": rfq_id,
             "workbook_ref": "local://workbook_sample_001",
-            "workbook_filename": "ghi_workbook_36_sheets.xls",
+            "workbook_filename": "ghi_workbook_32_sheets.xls",
             "uploaded_at": "2026-03-24T11:55:00Z",
         },
     }
@@ -75,7 +75,7 @@ def _workbook_uploaded_event(rfq_id: str, event_id: str = "evt-workbook-uploaded
 
 def _fixture_workbook_exists() -> bool:
     root = Path(__file__).resolve().parents[1]
-    path = root / "local_fixtures" / "workbook_uploaded" / "workbook_sample_001" / "ghi_workbook_36_sheets.xls"
+    path = root / "local_fixtures" / "workbook_uploaded" / "workbook_sample_001" / "ghi_workbook_32_sheets.xls"
     return path.exists()
 
 
