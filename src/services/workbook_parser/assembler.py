@@ -35,12 +35,57 @@ def build_envelope(
     matcher_issues: list[ParserIssue],
     cross_checks: list[CrossCheck],
 ) -> dict:
+    raw_sheet_reports = {
+        "General": general_result.sheet_report,
+        "Bid S": bid_s_result.sheet_report,
+        "Top Sheet": top_sheet_result.sheet_report,
+    }
+
+    matcher_warning_counts = {name: 0 for name in raw_sheet_reports}
+    matcher_error_counts = {name: 0 for name in raw_sheet_reports}
+    for issue in matcher_issues:
+        if issue.sheet_name in matcher_warning_counts:
+            if issue.severity == "warning":
+                matcher_warning_counts[issue.sheet_name] += 1
+            elif issue.severity == "error":
+                matcher_error_counts[issue.sheet_name] += 1
+
+    sheet_reports = {}
+    for name, report in raw_sheet_reports.items():
+        warning_count = report.warning_count + matcher_warning_counts[name]
+        error_count = report.error_count + matcher_error_counts[name]
+
+        status = report.status
+        if report.status in {"parsed_ok", "parsed_with_warnings"}:
+            if error_count > 0:
+                status = "failed"
+            elif warning_count > 0:
+                status = "parsed_with_warnings"
+            else:
+                status = "parsed_ok"
+
+        sheet_reports[name] = type(report)(
+            sheet_name=report.sheet_name,
+            status=status,
+            merged_regions_count=report.merged_regions_count,
+            expected_body_range=report.expected_body_range,
+            rows_scanned=report.rows_scanned,
+            rows_kept=report.rows_kept,
+            rows_skipped=report.rows_skipped,
+            warning_count=warning_count,
+            error_count=error_count,
+        )
+
     all_issues = [*matcher_issues, *general_result.issues, *bid_s_result.issues, *top_sheet_result.issues]
     warnings = [issue for issue in all_issues if issue.severity == "warning"]
     errors = [issue for issue in all_issues if issue.severity == "error"]
 
+    parsed_sheets = [name for name, report in sheet_reports.items() if report.status in {"parsed_ok", "parsed_with_warnings"}]
+    skipped_sheets = [name for name, report in sheet_reports.items() if report.status == "skipped"]
+    failed_sheets = [name for name, report in sheet_reports.items() if report.status == "failed"]
+
     status = "parsed_ok"
-    if errors or not template_match:
+    if errors or not template_match or failed_sheets:
         status = "failed"
     elif warnings:
         status = "parsed_with_warnings"
@@ -58,23 +103,28 @@ def build_envelope(
 
     cost_breakdown_profile = CostBreakdownProfile(
         bid_summary_lines=bid_s_result.bid_summary_lines,
-        bid_summary=bid_s_result.bid_summary or None,
+        bid_summary=bid_s_result.bid_summary,
         top_sheet_lines=top_sheet_result.top_sheet_lines,
-        top_sheet_summary=top_sheet_result.top_sheet_summary or None,
+        top_sheet_summary=top_sheet_result.top_sheet_summary,
     )
 
     parser_report = ParserReport(
         status=status,
-        parsed_sheets=["General", "Bid S", "Top Sheet"],
-        skipped_sheets=[],
+        parsed_sheets=parsed_sheets,
+        skipped_sheets=skipped_sheets,
         warnings=warnings,
         errors=errors,
-        anchor_checks=matcher_anchor_checks,
+        anchor_checks=[
+            *matcher_anchor_checks,
+            *general_result.anchor_checks,
+            *bid_s_result.anchor_checks,
+            *top_sheet_result.anchor_checks,
+        ],
         cross_checks=cross_checks,
         sheet_reports=SheetReports(
-            general=general_result.sheet_report,
-            bid_s=bid_s_result.sheet_report,
-            top_sheet=top_sheet_result.sheet_report,
+            general=sheet_reports["General"],
+            bid_s=sheet_reports["Bid S"],
+            top_sheet=sheet_reports["Top Sheet"],
         ),
     )
 
