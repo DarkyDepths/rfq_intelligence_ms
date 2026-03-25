@@ -242,6 +242,8 @@ class LifecycleHandlers:
             rfq_id=rfq_id,
         )
 
+        parser_artifacts_created = False
+
         if processing_action == "duplicate_completed":
             return {
                 "status": "duplicate",
@@ -267,29 +269,38 @@ class LifecycleHandlers:
                 workbook_filename=payload["workbook_filename"],
                 uploaded_at=payload["uploaded_at"],
             )
-            workbook_profile_artifact = self.workbook_service.build_workbook_profile_from_uploaded_event(
+            parser_artifacts = self.workbook_service.build_workbook_parser_artifacts_from_uploaded_event(
                 workbook_context=workbook_context,
                 event_meta=event_meta,
                 commit=False,
             )
+            parser_artifacts_created = True
 
-            intake_artifact, briefing_artifact = self.review_service.get_current_supporting_artifacts(rfq_id)
-            workbook_review_artifact = self.review_service.build_workbook_review_report(
-                rfq_id=rfq_id,
-                workbook_profile_artifact=workbook_profile_artifact,
-                event_meta=event_meta,
-                intake_artifact=intake_artifact,
-                briefing_artifact=briefing_artifact,
-                commit=False,
-            )
+            workbook_profile_artifact = parser_artifacts["workbook_profile"]
+            cost_breakdown_artifact = parser_artifacts["cost_breakdown_profile"]
+            parser_report_artifact = parser_artifacts["parser_report"]
+            parser_failed = parser_report_artifact.status == "failed"
 
-            analytical_artifact = self.analytical_record_service.enrich_analytical_record_from_workbook(
-                rfq_id=rfq_id,
-                workbook_profile_artifact=workbook_profile_artifact,
-                workbook_review_artifact=workbook_review_artifact,
-                event_meta=event_meta,
-                commit=False,
-            )
+            workbook_review_artifact = None
+            analytical_artifact = None
+            if not parser_failed:
+                intake_artifact, briefing_artifact = self.review_service.get_current_supporting_artifacts(rfq_id)
+                workbook_review_artifact = self.review_service.build_workbook_review_report(
+                    rfq_id=rfq_id,
+                    workbook_profile_artifact=workbook_profile_artifact,
+                    event_meta=event_meta,
+                    intake_artifact=intake_artifact,
+                    briefing_artifact=briefing_artifact,
+                    commit=False,
+                )
+
+                analytical_artifact = self.analytical_record_service.enrich_analytical_record_from_workbook(
+                    rfq_id=rfq_id,
+                    workbook_profile_artifact=workbook_profile_artifact,
+                    workbook_review_artifact=workbook_review_artifact,
+                    event_meta=event_meta,
+                    commit=False,
+                )
 
             snapshot_artifact = self.snapshot_service.rebuild_snapshot_for_rfq(
                 rfq_id=rfq_id,
@@ -300,6 +311,19 @@ class LifecycleHandlers:
             self.event_processing_service.mark_completed(event_id=event_meta["event_id"])
         except Exception as exc:
             self.event_processing_service.rollback_active_transaction()
+
+            if not parser_artifacts_created:
+                self.workbook_service.persist_parser_failure_artifact(
+                    rfq_id=rfq_id,
+                    event_meta=event_meta,
+                    workbook_ref=payload.get("workbook_ref"),
+                    workbook_filename=payload.get("workbook_filename"),
+                    uploaded_at=payload.get("uploaded_at"),
+                    error_code="WORKBOOK_PARSE_PIPELINE_FAILED",
+                    error_message=str(exc),
+                    commit=True,
+                )
+
             self.event_processing_service.mark_failed(
                 event_id=event_meta["event_id"],
                 error_message=str(exc),
@@ -307,7 +331,7 @@ class LifecycleHandlers:
             raise
 
         return {
-            "status": "processed",
+            "status": "processed_with_failures" if parser_failed else "processed",
             "event_id": event_meta["event_id"],
             "event_type": event_type,
             "rfq_id": rfq_id,
@@ -317,15 +341,25 @@ class LifecycleHandlers:
                     "version": workbook_profile_artifact.version,
                     "status": workbook_profile_artifact.status,
                 },
+                "cost_breakdown_profile": {
+                    "id": str(cost_breakdown_artifact.id),
+                    "version": cost_breakdown_artifact.version,
+                    "status": cost_breakdown_artifact.status,
+                },
+                "parser_report": {
+                    "id": str(parser_report_artifact.id),
+                    "version": parser_report_artifact.version,
+                    "status": parser_report_artifact.status,
+                },
                 "workbook_review_report": {
-                    "id": str(workbook_review_artifact.id),
-                    "version": workbook_review_artifact.version,
-                    "status": workbook_review_artifact.status,
+                    "id": str(workbook_review_artifact.id) if workbook_review_artifact else None,
+                    "version": workbook_review_artifact.version if workbook_review_artifact else None,
+                    "status": workbook_review_artifact.status if workbook_review_artifact else "skipped",
                 },
                 "rfq_analytical_record": {
-                    "id": str(analytical_artifact.id),
-                    "version": analytical_artifact.version,
-                    "status": analytical_artifact.status,
+                    "id": str(analytical_artifact.id) if analytical_artifact else None,
+                    "version": analytical_artifact.version if analytical_artifact else None,
+                    "status": analytical_artifact.status if analytical_artifact else "skipped",
                 },
                 "rfq_intelligence_snapshot": {
                     "id": str(snapshot_artifact.id),

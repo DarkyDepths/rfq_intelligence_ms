@@ -17,6 +17,8 @@ ARTIFACT_TYPES = [
     "rfq_intake_profile",
     "intelligence_briefing",
     "workbook_profile",
+    "cost_breakdown_profile",
+    "parser_report",
     "workbook_review_report",
     "rfq_intelligence_snapshot",
     "rfq_analytical_record",

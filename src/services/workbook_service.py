@@ -62,39 +62,56 @@ class WorkbookService:
         event_meta: dict,
         commit: bool = True,
     ):
-        """Build and persist workbook_profile for workbook.uploaded first slice."""
+        """Backward-compatible helper returning the workbook_profile artifact only."""
+        artifacts = self.build_workbook_parser_artifacts_from_uploaded_event(
+            workbook_context=workbook_context,
+            event_meta=event_meta,
+            commit=commit,
+        )
+        return artifacts["workbook_profile"]
+
+    @staticmethod
+    def _status_from_parser_status(parser_status: str) -> str:
+        if parser_status == "parsed_ok":
+            return "complete"
+        if parser_status == "parsed_with_warnings":
+            return "partial"
+        return "failed"
+
+    @staticmethod
+    def _workbook_source(workbook_context: dict) -> dict:
+        filename = workbook_context["workbook_filename"]
+        return {
+            "workbook_ref": workbook_context["workbook_ref"],
+            "workbook_filename": filename,
+            "uploaded_at": workbook_context.get("uploaded_at"),
+            "file_extension": filename.split(".")[-1].lower(),
+            "local_workbook_path": workbook_context.get("local_workbook_path"),
+        }
+
+    def build_workbook_parser_artifacts_from_uploaded_event(
+        self,
+        workbook_context: dict,
+        event_meta: dict,
+        commit: bool = True,
+    ) -> dict:
+        """Build and persist deterministic parser artifacts for workbook.uploaded."""
         rfq_id = UUID(str(workbook_context["rfq_id"]))
         workbook_parse = parse_workbook_deterministic(
             workbook_path=workbook_context["local_workbook_path"],
             expected_sheet_names=workbook_context.get("expected_sheet_names"),
         )
 
+        envelope = workbook_parse["workbook_parse_envelope"]
         structure = workbook_parse["workbook_structure"]
-        extracts = workbook_parse["high_value_extracts"]
         recognition = workbook_parse["template_recognition"]
+        parser_report = envelope["parser_report"]
+        parser_status = parser_report["status"]
+        artifact_status = self._status_from_parser_status(parser_status)
 
-        quality_gaps = []
-        if structure["missing_sheets"]:
-            quality_gaps.append(f"Missing expected sheets: {', '.join(structure['missing_sheets'][:10])}")
-        if structure["sheet_count_found"] != structure["expected_sheet_count"]:
-            quality_gaps.append(
-                "Sheet count differs from expected GHI workbook template."
-            )
-        if not extracts["text_hits"]:
-            quality_gaps.append("No high-signal workbook labels were detected in scanned cells.")
+        rfq_identity = (envelope.get("workbook_profile") or {}).get("rfq_identity") or {}
 
-        profile_status = "complete" if recognition["recognition_status"] == "matched" else "partial"
-
-        canonical_estimate_profile = {
-            "rfq_id": str(rfq_id),
-            "detected_labels": extracts["text_hits"][:25],
-            "detected_identifiers": {
-                "rfq_code": workbook_context.get("rfq_display", {}).get("rfq_code"),
-                "project_title": workbook_context.get("rfq_display", {}).get("project_title"),
-            },
-        }
-
-        content = {
+        workbook_profile_content = {
             "artifact_meta": {
                 "artifact_type": "workbook_profile",
                 "slice": "workbook.uploaded_vertical_slice_v1",
@@ -102,12 +119,10 @@ class WorkbookService:
                 "source_event_id": event_meta["event_id"],
                 "source_event_type": event_meta["event_type"],
             },
-            "workbook_source": {
-                "workbook_ref": workbook_context["workbook_ref"],
-                "workbook_filename": workbook_context["workbook_filename"],
-                "uploaded_at": workbook_context.get("uploaded_at"),
-                "file_extension": workbook_context["workbook_filename"].split(".")[-1].lower(),
-            },
+            "workbook_source": self._workbook_source(workbook_context),
+            "template_name": envelope.get("template_name"),
+            "parser_version": envelope.get("parser_version"),
+            "template_match": envelope.get("template_match"),
             "template_recognition": recognition,
             "workbook_structure": {
                 "sheet_names": structure["sheet_names"],
@@ -116,52 +131,139 @@ class WorkbookService:
                 "missing_sheets": structure["missing_sheets"],
                 "extra_sheets": structure["extra_sheets"],
             },
-            "canonical_estimate_profile": canonical_estimate_profile,
-            "cost_breakdown": {
-                "numeric_sample": extracts["numeric_sample"][:60],
-                "totals_detected": [
-                    hit for hit in extracts["text_hits"] if "total" in hit["text"].lower()
-                ][:20],
-                "status": "partial",
-            },
-            "financial_profile": {
-                "status": "partial" if extracts["numeric_sample"] else "unavailable",
-                "notes": "Financial values require deeper semantic mapping in future slices.",
-            },
-            "schedule_profile": {
-                "status": "partial" if any("delivery" in h["text"].lower() or "lead" in h["text"].lower() for h in extracts["text_hits"]) else "unavailable",
-                "notes": "Schedule extraction is keyword-level only in this first workbook slice.",
-            },
-            "structural_quality_and_gaps": {
-                "status": profile_status,
-                "parse_coverage": {
-                    "scanned_sheet_count": structure["sheet_count_found"],
-                    "keyword_hits": len(extracts["text_hits"]),
-                    "numeric_hits": len(extracts["numeric_sample"]),
+            "canonical_estimate_profile": {
+                "rfq_id": str(rfq_id),
+                "detected_identifiers": {
+                    "rfq_code": workbook_context.get("rfq_display", {}).get("rfq_code"),
+                    "project_title": rfq_identity.get("project_name")
+                    or workbook_context.get("rfq_display", {}).get("project_title"),
+                    "client_name": rfq_identity.get("client_name"),
+                    "inquiry_no": rfq_identity.get("inquiry_no"),
                 },
-                "gaps": quality_gaps,
-                "unsupported_variations": [
-                    "Arbitrary workbook templates are not supported in this slice.",
-                ],
             },
+            "workbook_profile": envelope.get("workbook_profile"),
             "pairing_validation": {
                 "pairing_status": "not_assessed",
                 "notes": "Standalone workbook fixture processed without assuming linkage to the local RFQ source package fixture.",
                 "external_linkage_required": True,
             },
             "downstream_readiness": {
-                "review_report_ready": True,
+                "review_report_ready": parser_status != "failed",
                 "benchmark_ready": False,
                 "similarity_ready": False,
                 "requires_human_review": True,
             },
+            "parser_report_status": parser_status,
         }
 
-        artifact = self.datasource.create_new_artifact_version(
+        cost_breakdown_content = {
+            "artifact_meta": {
+                "artifact_type": "cost_breakdown_profile",
+                "slice": "workbook.uploaded_vertical_slice_v1",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "source_event_id": event_meta["event_id"],
+                "source_event_type": event_meta["event_type"],
+            },
+            "workbook_source": self._workbook_source(workbook_context),
+            "template_name": envelope.get("template_name"),
+            "parser_version": envelope.get("parser_version"),
+            "template_match": envelope.get("template_match"),
+            "cost_breakdown_profile": envelope.get("cost_breakdown_profile"),
+            "parser_report_status": parser_status,
+        }
+
+        parser_report_content = {
+            "artifact_meta": {
+                "artifact_type": "parser_report",
+                "slice": "workbook.uploaded_vertical_slice_v1",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "source_event_id": event_meta["event_id"],
+                "source_event_type": event_meta["event_type"],
+            },
+            "workbook_source": self._workbook_source(workbook_context),
+            "template_name": envelope.get("template_name"),
+            "parser_version": envelope.get("parser_version"),
+            "template_match": envelope.get("template_match"),
+            "parsed_at": envelope.get("parsed_at"),
+            "parser_report": parser_report,
+        }
+
+        workbook_profile_artifact = self.datasource.create_new_artifact_version(
             rfq_id=rfq_id,
             artifact_type="workbook_profile",
+            content=workbook_profile_content,
+            status=artifact_status,
+            source_event_type=event_meta["event_type"],
+            source_event_id=event_meta["event_id"],
+        )
+        cost_breakdown_artifact = self.datasource.create_new_artifact_version(
+            rfq_id=rfq_id,
+            artifact_type="cost_breakdown_profile",
+            content=cost_breakdown_content,
+            status=artifact_status,
+            source_event_type=event_meta["event_type"],
+            source_event_id=event_meta["event_id"],
+        )
+        parser_report_artifact = self.datasource.create_new_artifact_version(
+            rfq_id=rfq_id,
+            artifact_type="parser_report",
+            content=parser_report_content,
+            status=artifact_status,
+            source_event_type=event_meta["event_type"],
+            source_event_id=event_meta["event_id"],
+        )
+
+        if commit:
+            self.datasource.db.commit()
+            self.datasource.db.refresh(workbook_profile_artifact)
+            self.datasource.db.refresh(cost_breakdown_artifact)
+            self.datasource.db.refresh(parser_report_artifact)
+
+        return {
+            "workbook_profile": workbook_profile_artifact,
+            "cost_breakdown_profile": cost_breakdown_artifact,
+            "parser_report": parser_report_artifact,
+        }
+
+    def persist_parser_failure_artifact(
+        self,
+        rfq_id: str,
+        event_meta: dict,
+        workbook_ref: str | None,
+        workbook_filename: str | None,
+        uploaded_at: str | None,
+        error_code: str,
+        error_message: str,
+        commit: bool = True,
+    ):
+        """Persist a truthful parser_report failure state when parsing cannot start/complete."""
+        rfq_uuid = UUID(str(rfq_id))
+        content = {
+            "artifact_meta": {
+                "artifact_type": "parser_report",
+                "slice": "workbook.uploaded_vertical_slice_v1",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "source_event_id": event_meta["event_id"],
+                "source_event_type": event_meta["event_type"],
+            },
+            "workbook_source": {
+                "workbook_ref": workbook_ref,
+                "workbook_filename": workbook_filename,
+                "uploaded_at": uploaded_at,
+            },
+            "parser_report": {
+                "status": "failed",
+                "failure": {
+                    "code": error_code,
+                    "message": error_message,
+                },
+            },
+        }
+        artifact = self.datasource.create_new_artifact_version(
+            rfq_id=rfq_uuid,
+            artifact_type="parser_report",
             content=content,
-            status=profile_status,
+            status="failed",
             source_event_type=event_meta["event_type"],
             source_event_id=event_meta["event_id"],
         )
