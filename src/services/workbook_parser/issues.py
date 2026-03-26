@@ -1,4 +1,4 @@
-"""Parser issue/report support types for workbook parser v1.1."""
+"""Parser issue/report support types for workbook parser v2.1."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ ParserStatus = Literal["parsed_ok", "parsed_with_warnings", "failed"]
 SheetParseStatus = Literal["parsed_ok", "parsed_with_warnings", "failed", "skipped"]
 Severity = Literal["info", "warning", "error"]
 CheckStatus = Literal["pass", "warn", "fail", "skipped"]
-SheetName = Literal["General", "Bid S", "Top Sheet"]
+SheetName = Literal["General", "Bid S", "Top Sheet", "Cash Flow", "Mat Break-up", "B-O-Q"]
 
 
 @dataclass(frozen=True)
@@ -61,3 +61,13 @@ class SheetReport:
     rows_skipped: int | None
     warning_count: int
     error_count: int
+
+
+@dataclass(frozen=True)
+class SheetReports:
+    general: SheetReport
+    bid_s: SheetReport
+    top_sheet: SheetReport
+    cash_flow: SheetReport | None = None
+    mat_breakup: SheetReport | None = None
+    boq: SheetReport | None = None

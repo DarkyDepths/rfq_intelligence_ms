@@ -1,4 +1,4 @@
-"""Frozen typed contracts for deterministic workbook parser v1.1."""
+"""Frozen typed contracts for deterministic workbook parser v2.1 (Pack 2 foundation)."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from src.services.workbook_parser.issues import (
     ParserStatus,
     SheetName,
     SheetReport,
+    SheetReports,
 )
 
 BidSection = Literal["direct_cost", "other_overheads", "pricing_final"]
@@ -375,13 +376,6 @@ class CostBreakdownProfile:
     top_sheet_summary: TopSheetSummary | None = None
     material_decomposition: MaterialDecomposition | None = None
     financial_profile: FinancialProfile | None = None
-
-
-@dataclass(frozen=True)
-class SheetReports:
-    general: SheetReport
-    bid_s: SheetReport
-    top_sheet: SheetReport
 
 
 @dataclass(frozen=True)
