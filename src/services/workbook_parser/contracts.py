@@ -57,6 +57,14 @@ class RfqIdentityMirrorTopSheet:
 
 
 @dataclass(frozen=True)
+class RfqIdentityMirrorCashFlow:
+    inquiry_no: str | None = None
+    project_name: str | None = None
+    client_name: str | None = None
+    dated: str | None = None
+
+
+@dataclass(frozen=True)
 class IdentityMirrors:
     bid_s: RfqIdentityMirrorBidS = field(default_factory=RfqIdentityMirrorBidS)
     top_sheet: RfqIdentityMirrorTopSheet = field(default_factory=RfqIdentityMirrorTopSheet)
@@ -225,11 +233,148 @@ class TopSheetSummary:
 
 
 @dataclass(frozen=True)
+class CashFlowMonthlyValues:
+    month_1: float | None = None
+    month_2: float | None = None
+    month_3: float | None = None
+    month_4: float | None = None
+    month_5: float | None = None
+    month_6: float | None = None
+    month_7: float | None = None
+    month_8: float | None = None
+    month_9: float | None = None
+    month_10: float | None = None
+    month_11: float | None = None
+    month_12: float | None = None
+
+
+@dataclass(frozen=True)
+class CashFlowLine:
+    sheet_row: int
+    canonical_key: str
+    line_kind: Literal["summary", "detail"]
+    label_raw: str | None = None
+    monthly_values: CashFlowMonthlyValues = field(default_factory=CashFlowMonthlyValues)
+    total_pct: float | None = None
+    total_sr: float | None = None
+
+
+@dataclass(frozen=True)
+class CashFlowSummary:
+    total_inflow_sr: float | None = None
+    total_outflow_sr: float | None = None
+    total_inflow_pct: float | None = None
+    total_outflow_pct: float | None = None
+    net_cash_position_final: float | None = None
+    months_with_data: int = 0
+    negative_months_count: int = 0
+    peak_negative_exposure: float | None = None
+
+
+@dataclass(frozen=True)
+class FinancialProfile:
+    identity_mirror: RfqIdentityMirrorCashFlow = field(default_factory=RfqIdentityMirrorCashFlow)
+    cash_flow_lines: list[CashFlowLine] = field(default_factory=list)
+    cash_flow_summary: CashFlowSummary = field(default_factory=CashFlowSummary)
+
+
+@dataclass(frozen=True)
+class MaterialCategoryRow:
+    sheet_row: int
+    sr_no: int | None = None
+    code: str | None = None
+    canonical_key: str | None = None
+    description: str | None = None
+    material_spec: str | None = None
+    weight_finish_ton: float | None = None
+    cost_total_sr: float | None = None
+    cost_pct: float | None = None
+
+
+@dataclass(frozen=True)
+class MaterialCategoryTotals:
+    weight_finish_ton: float | None = None
+    cost_total_sr: float | None = None
+    cost_pct: float | None = None
+
+
+@dataclass(frozen=True)
+class MaterialDecompositionItem:
+    item_number: int
+    item_qty: float | None = None
+    categories: list[MaterialCategoryRow] = field(default_factory=list)
+    grand_total: MaterialCategoryTotals = field(default_factory=MaterialCategoryTotals)
+
+
+@dataclass(frozen=True)
+class MaterialDecompositionSummary:
+    categories: list[str] = field(default_factory=list)
+    grand_total: MaterialCategoryTotals = field(default_factory=MaterialCategoryTotals)
+
+
+@dataclass(frozen=True)
+class MaterialDecomposition:
+    items: list[MaterialDecompositionItem] = field(default_factory=list)
+    summary: MaterialDecompositionSummary = field(default_factory=MaterialDecompositionSummary)
+
+
+@dataclass(frozen=True)
+class BoqComponentRow:
+    sheet_row: int
+    material_code: str | None = None
+    section_label: str | None = None
+    component_description: str | None = None
+    material_spec: str | None = None
+    qty: float | None = None
+    finish_weight_kg: float | None = None
+    procured_weight_kg: float | None = None
+    unit_price_sr_per_kg: float | None = None
+    total_amount_sr: float | None = None
+
+
+@dataclass(frozen=True)
+class BoqGrandTotal:
+    finish_weight_kg: float | None = None
+    procured_weight_kg: float | None = None
+    total_amount_sr: float | None = None
+
+
+@dataclass(frozen=True)
+class BoqItemDetail:
+    item_block_index: int
+    tag_number: str | None = None
+    description: str | None = None
+    qty: float | None = None
+    components: list[BoqComponentRow] = field(default_factory=list)
+    sections_found: list[str] = field(default_factory=list)
+    grand_total: BoqGrandTotal = field(default_factory=BoqGrandTotal)
+    computed_total: BoqGrandTotal = field(default_factory=BoqGrandTotal)
+    grand_total_vs_computed_match: bool | None = None
+
+
+@dataclass(frozen=True)
+class MaterialPriceEntry:
+    sheet_row: int
+    material_spec: str | None = None
+    material_class: str | None = None
+    sar_per_kg: float | None = None
+    usd_per_ton_offer: float | None = None
+
+
+@dataclass(frozen=True)
+class BoqProfile:
+    boq_item_details: list[BoqItemDetail] = field(default_factory=list)
+    material_price_table: list[MaterialPriceEntry] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class CostBreakdownProfile:
     bid_summary_lines: list[BidSummaryLine] = field(default_factory=list)
     bid_summary: BidSummary | None = None
     top_sheet_lines: list[TopSheetLine] = field(default_factory=list)
     top_sheet_summary: TopSheetSummary | None = None
+    material_decomposition: MaterialDecomposition | None = None
+    financial_profile: FinancialProfile | None = None
 
 
 @dataclass(frozen=True)
@@ -264,3 +409,4 @@ class WorkbookParseEnvelope:
     workbook_profile: WorkbookProfile
     cost_breakdown_profile: CostBreakdownProfile
     parser_report: ParserReport
+    boq_profile: BoqProfile | None = None
