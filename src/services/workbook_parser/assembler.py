@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from src.services.workbook_parser.contracts import (
     CostBreakdownProfile,
+    FinancialProfile,
     IdentityMirrors,
     ParserReport,
     SheetReports,
@@ -14,12 +15,32 @@ from src.services.workbook_parser.contracts import (
     WorkbookProfile,
 )
 from src.services.workbook_parser.extractors.bid_s_extractor import BidSExtractionResult
+from src.services.workbook_parser.extractors.cash_flow_extractor import CashFlowExtractionResult
 from src.services.workbook_parser.extractors.general_extractor import GeneralExtractionResult
+from src.services.workbook_parser.extractors.mat_breakup_extractor import MatBreakupExtractionResult
 from src.services.workbook_parser.extractors.top_sheet_extractor import TopSheetExtractionResult
-from src.services.workbook_parser.issues import AnchorCheck, CrossCheck, ParserIssue
+from src.services.workbook_parser.issues import AnchorCheck, CrossCheck, ParserIssue, SheetReport
 
 TEMPLATE_NAME = "ghi_estimation_workbook_v1"
-PARSER_VERSION = "workbook-parser-v1.1"
+PARSER_VERSION = "workbook-parser-v2.1"
+
+
+def _pack2_ok(result) -> bool:
+    return result is not None and result.sheet_report.status != "failed"
+
+
+def _skipped_sheet_report(sheet_name: str):
+    return SheetReport(
+        sheet_name=sheet_name,
+        status="skipped",
+        merged_regions_count=None,
+        expected_body_range=None,
+        rows_scanned=0,
+        rows_kept=0,
+        rows_skipped=0,
+        warning_count=0,
+        error_count=0,
+    )
 
 
 def build_envelope(
@@ -31,6 +52,8 @@ def build_envelope(
     general_result: GeneralExtractionResult,
     bid_s_result: BidSExtractionResult,
     top_sheet_result: TopSheetExtractionResult,
+    cash_flow_result: CashFlowExtractionResult | None,
+    mat_breakup_result: MatBreakupExtractionResult | None,
     matcher_anchor_checks: list[AnchorCheck],
     matcher_issues: list[ParserIssue],
     cross_checks: list[CrossCheck],
@@ -39,6 +62,10 @@ def build_envelope(
         "General": general_result.sheet_report,
         "Bid S": bid_s_result.sheet_report,
         "Top Sheet": top_sheet_result.sheet_report,
+        "Cash Flow": cash_flow_result.sheet_report if cash_flow_result is not None else _skipped_sheet_report("Cash Flow"),
+        "Mat Break-up": (
+            mat_breakup_result.sheet_report if mat_breakup_result is not None else _skipped_sheet_report("Mat Break-up")
+        ),
     }
 
     matcher_warning_counts = {name: 0 for name in raw_sheet_reports}
@@ -76,7 +103,14 @@ def build_envelope(
             error_count=error_count,
         )
 
-    all_issues = [*matcher_issues, *general_result.issues, *bid_s_result.issues, *top_sheet_result.issues]
+    all_issues = [
+        *matcher_issues,
+        *general_result.issues,
+        *bid_s_result.issues,
+        *top_sheet_result.issues,
+        *(cash_flow_result.issues if cash_flow_result is not None else []),
+        *(mat_breakup_result.issues if mat_breakup_result is not None else []),
+    ]
     warnings = [issue for issue in all_issues if issue.severity == "warning"]
     errors = [issue for issue in all_issues if issue.severity == "error"]
 
@@ -84,10 +118,17 @@ def build_envelope(
     skipped_sheets = [name for name, report in sheet_reports.items() if report.status == "skipped"]
     failed_sheets = [name for name, report in sheet_reports.items() if report.status == "failed"]
 
+    core_failed = (
+        not template_match
+        or sheet_reports["General"].status == "failed"
+        or sheet_reports["Bid S"].status == "failed"
+        or sheet_reports["Top Sheet"].status == "failed"
+    )
+
     status = "parsed_ok"
-    if errors or not template_match or failed_sheets:
+    if core_failed:
         status = "failed"
-    elif warnings:
+    elif warnings or errors or failed_sheets:
         status = "parsed_with_warnings"
 
     workbook_profile = WorkbookProfile(
@@ -106,6 +147,18 @@ def build_envelope(
         bid_summary=bid_s_result.bid_summary,
         top_sheet_lines=top_sheet_result.top_sheet_lines,
         top_sheet_summary=top_sheet_result.top_sheet_summary,
+        material_decomposition=(
+            mat_breakup_result.material_decomposition if _pack2_ok(mat_breakup_result) else None
+        ),
+        financial_profile=(
+            FinancialProfile(
+                identity_mirror=cash_flow_result.identity_mirror,
+                cash_flow_lines=cash_flow_result.cash_flow_lines,
+                cash_flow_summary=cash_flow_result.cash_flow_summary,
+            )
+            if _pack2_ok(cash_flow_result)
+            else None
+        ),
     )
 
     parser_report = ParserReport(
@@ -119,12 +172,16 @@ def build_envelope(
             *general_result.anchor_checks,
             *bid_s_result.anchor_checks,
             *top_sheet_result.anchor_checks,
+            *(cash_flow_result.anchor_checks if cash_flow_result is not None else []),
+            *(mat_breakup_result.anchor_checks if mat_breakup_result is not None else []),
         ],
         cross_checks=cross_checks,
         sheet_reports=SheetReports(
             general=sheet_reports["General"],
             bid_s=sheet_reports["Bid S"],
             top_sheet=sheet_reports["Top Sheet"],
+            cash_flow=sheet_reports["Cash Flow"],
+            mat_breakup=sheet_reports["Mat Break-up"],
         ),
     )
 
