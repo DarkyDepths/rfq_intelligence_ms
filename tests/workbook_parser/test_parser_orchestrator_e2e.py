@@ -33,7 +33,13 @@ def test_orchestrator_emits_step14_cross_checks_with_expected_profile():
     assert revenue_check["status"] == "pass"
     assert revenue_check["delta_abs"] is not None and revenue_check["delta_abs"] > 0
 
+    assert by_code["CASH_FLOW_vs_GENERAL_INQUIRY_NO"]["status"] == "pass"
+    assert by_code["CASH_FLOW_vs_GENERAL_CLIENT_NAME"]["status"] == "pass"
+    assert by_code["CASH_FLOW_vs_GENERAL_PROJECT_NAME"]["status"] == "pass"
     assert by_code["CASH_FLOW_INFLOW_vs_BID_S_GRAND_TOTAL"]["status"] == "pass"
+    assert by_code["CASH_FLOW_INFLOW_vs_TOP_SHEET_REVENUE"]["status"] in {"pass", "warn"}
+
+    assert by_code["MAT_BREAKUP_TOTAL_vs_BID_S_MATERIAL"]["status"] == "pass"
     assert by_code["MAT_BREAKUP_FINISH_WT_vs_BID_S_WEIGHT"]["status"] == "pass"
 
     direct_cost_check = by_code["TOP_SHEET_DIRECT_COST_vs_BID_S_TOTAL_DIRECT_COST"]

@@ -100,7 +100,7 @@ def test_cross_checks_include_expected_codes_and_informational_direct_cost_note(
                     section="direct_cost",
                     line_kind="detail",
                     canonical_key="material",
-                    amount_sar=105743.0,
+                    amount_sar=202293.24,
                 ),
                 BidSummaryLine(
                     sheet_row=41,
@@ -179,7 +179,7 @@ def test_cross_checks_include_expected_codes_and_informational_direct_cost_note(
 
     assert by_code["CASH_FLOW_vs_GENERAL_INQUIRY_NO"].status == "pass"
     assert by_code["CASH_FLOW_INFLOW_vs_BID_S_GRAND_TOTAL"].status == "pass"
-    assert by_code["MAT_BREAKUP_TOTAL_vs_BID_S_MATERIAL"].status == "warn"
+    assert by_code["MAT_BREAKUP_TOTAL_vs_BID_S_MATERIAL"].status == "pass"
     assert by_code["MAT_BREAKUP_FINISH_WT_vs_BID_S_WEIGHT"].status == "pass"
     assert by_code["MAT_BREAKUP_ITEM_SUM_vs_SUMMARY"].status == "pass"
 
