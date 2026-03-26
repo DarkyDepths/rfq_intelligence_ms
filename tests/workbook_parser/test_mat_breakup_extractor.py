@@ -121,6 +121,13 @@ def test_mat_breakup_extractor_extracts_expected_material_decomposition_from_fix
     assert result.sheet_report.rows_kept == 1
     assert result.sheet_report.rows_skipped == 49
 
+    extracted_text_values = []
+    for extracted_item in decomposition.items:
+        for category in extracted_item.categories:
+            extracted_text_values.extend([category.code, category.canonical_key, category.description, category.material_spec])
+    extracted_text_values.extend(decomposition.summary.categories)
+    assert all(value is None or "ERROR" not in value.upper() for value in extracted_text_values)
+
 
 def test_mat_breakup_extractor_reports_anchor_mismatch_and_skips_blank_block_safely():
     base_reader = _build_reader()
