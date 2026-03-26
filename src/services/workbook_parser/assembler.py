@@ -6,6 +6,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 
 from src.services.workbook_parser.contracts import (
+    BoqProfile,
     CostBreakdownProfile,
     FinancialProfile,
     IdentityMirrors,
@@ -15,6 +16,7 @@ from src.services.workbook_parser.contracts import (
     WorkbookProfile,
 )
 from src.services.workbook_parser.extractors.bid_s_extractor import BidSExtractionResult
+from src.services.workbook_parser.extractors.boq_extractor import BoqExtractionResult
 from src.services.workbook_parser.extractors.cash_flow_extractor import CashFlowExtractionResult
 from src.services.workbook_parser.extractors.general_extractor import GeneralExtractionResult
 from src.services.workbook_parser.extractors.mat_breakup_extractor import MatBreakupExtractionResult
@@ -54,6 +56,7 @@ def build_envelope(
     top_sheet_result: TopSheetExtractionResult,
     cash_flow_result: CashFlowExtractionResult | None,
     mat_breakup_result: MatBreakupExtractionResult | None,
+    boq_result: BoqExtractionResult | None,
     matcher_anchor_checks: list[AnchorCheck],
     matcher_issues: list[ParserIssue],
     cross_checks: list[CrossCheck],
@@ -66,6 +69,7 @@ def build_envelope(
         "Mat Break-up": (
             mat_breakup_result.sheet_report if mat_breakup_result is not None else _skipped_sheet_report("Mat Break-up")
         ),
+        "B-O-Q": boq_result.sheet_report if boq_result is not None else _skipped_sheet_report("B-O-Q"),
     }
 
     matcher_warning_counts = {name: 0 for name in raw_sheet_reports}
@@ -110,6 +114,7 @@ def build_envelope(
         *top_sheet_result.issues,
         *(cash_flow_result.issues if cash_flow_result is not None else []),
         *(mat_breakup_result.issues if mat_breakup_result is not None else []),
+        *(boq_result.issues if boq_result is not None else []),
     ]
     warnings = [issue for issue in all_issues if issue.severity == "warning"]
     errors = [issue for issue in all_issues if issue.severity == "error"]
@@ -161,6 +166,13 @@ def build_envelope(
         ),
     )
 
+    boq_profile = None
+    if _pack2_ok(boq_result):
+        boq_profile = BoqProfile(
+            boq_item_details=boq_result.boq_item_details,
+            material_price_table=boq_result.material_price_table,
+        )
+
     parser_report = ParserReport(
         status=status,
         parsed_sheets=parsed_sheets,
@@ -174,6 +186,7 @@ def build_envelope(
             *top_sheet_result.anchor_checks,
             *(cash_flow_result.anchor_checks if cash_flow_result is not None else []),
             *(mat_breakup_result.anchor_checks if mat_breakup_result is not None else []),
+            *(boq_result.anchor_checks if boq_result is not None else []),
         ],
         cross_checks=cross_checks,
         sheet_reports=SheetReports(
@@ -182,6 +195,7 @@ def build_envelope(
             top_sheet=sheet_reports["Top Sheet"],
             cash_flow=sheet_reports["Cash Flow"],
             mat_breakup=sheet_reports["Mat Break-up"],
+            boq=sheet_reports["B-O-Q"],
         ),
     )
 
@@ -197,5 +211,6 @@ def build_envelope(
         workbook_profile=workbook_profile,
         cost_breakdown_profile=cost_breakdown_profile,
         parser_report=parser_report,
+        boq_profile=boq_profile,
     )
     return asdict(envelope)

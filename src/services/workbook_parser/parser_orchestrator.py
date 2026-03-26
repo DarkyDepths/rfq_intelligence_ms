@@ -8,6 +8,7 @@ from pathlib import Path
 from src.services.workbook_parser.assembler import build_envelope
 from src.services.workbook_parser.cross_checks import run_cross_checks
 from src.services.workbook_parser.extractors.bid_s_extractor import BidSExtractor
+from src.services.workbook_parser.extractors.boq_extractor import BoqExtractionResult, BoqExtractor
 from src.services.workbook_parser.extractors.cash_flow_extractor import CashFlowExtractionResult, CashFlowExtractor
 from src.services.workbook_parser.extractors.general_extractor import GeneralExtractor
 from src.services.workbook_parser.extractors.mat_breakup_extractor import MatBreakupExtractionResult, MatBreakupExtractor
@@ -37,6 +38,7 @@ class WorkbookParserOrchestrator:
         top_sheet_result = TopSheetExtractor(self._reader).extract()
         cash_flow_result = self._try_extract("Cash Flow", CashFlowExtractor, CashFlowExtractionResult)
         mat_breakup_result = self._try_extract("Mat Break-up", MatBreakupExtractor, MatBreakupExtractionResult)
+        boq_result = self._try_extract("B-O-Q", BoqExtractor, BoqExtractionResult)
 
         def _pack2_data(result):
             if result is None or result.sheet_report.status == "failed":
@@ -74,6 +76,7 @@ class WorkbookParserOrchestrator:
             top_sheet_result=top_sheet_result,
             cash_flow_result=cash_flow_result,
             mat_breakup_result=mat_breakup_result,
+            boq_result=boq_result,
             matcher_anchor_checks=match_result.anchor_checks,
             matcher_issues=match_result.issues,
             cross_checks=checks,
