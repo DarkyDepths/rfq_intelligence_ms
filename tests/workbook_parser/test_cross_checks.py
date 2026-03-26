@@ -96,6 +96,13 @@ def test_cross_checks_include_expected_codes_and_informational_direct_cost_note(
             "bid_summary": _base_bid_summary(),
             "bid_summary_lines": [
                 BidSummaryLine(
+                    sheet_row=14,
+                    section="direct_cost",
+                    line_kind="detail",
+                    canonical_key="material",
+                    amount_sar=105743.0,
+                ),
+                BidSummaryLine(
                     sheet_row=41,
                     section="other_overheads",
                     line_kind="detail",
@@ -131,9 +138,33 @@ def test_cross_checks_include_expected_codes_and_informational_direct_cost_note(
                 ),
             ],
         },
+        cash_flow_data={
+            "identity_mirror": {
+                "inquiry_no": "IF-25144",
+                "client_name": "Al Bawani Group",
+                "project_name": "Abqaiq Yanbu Pipeline SECTION 6 (AY-1L) BI-10-01575",
+            },
+            "cash_flow_summary": {
+                "total_inflow_sr": 971161.0,
+            },
+        },
+        mat_breakup_data={
+            "material_decomposition": {
+                "summary": {
+                    "grand_total": {
+                        "cost_total_sr": 202293.24,
+                        "weight_finish_ton": 10.24947475857454,
+                    }
+                },
+                "items": [
+                    {"grand_total": {"cost_total_sr": 100000.0}},
+                    {"grand_total": {"cost_total_sr": 102293.24}},
+                ],
+            }
+        },
     )
 
-    assert len(checks) == 16
+    assert len(checks) == 24
 
     by_code = {check.code: check for check in checks}
     assert by_code["GENERAL_vs_BID_S_INQUIRY_NO"].status == "pass"
@@ -145,6 +176,12 @@ def test_cross_checks_include_expected_codes_and_informational_direct_cost_note(
     assert direct_cost_check.status == "warn"
     assert direct_cost_check.note == "Informational delta; structural scope difference expected"
     assert direct_cost_check.delta_abs is not None and direct_cost_check.delta_abs > 0
+
+    assert by_code["CASH_FLOW_vs_GENERAL_INQUIRY_NO"].status == "pass"
+    assert by_code["CASH_FLOW_INFLOW_vs_BID_S_GRAND_TOTAL"].status == "pass"
+    assert by_code["MAT_BREAKUP_TOTAL_vs_BID_S_MATERIAL"].status == "warn"
+    assert by_code["MAT_BREAKUP_FINISH_WT_vs_BID_S_WEIGHT"].status == "pass"
+    assert by_code["MAT_BREAKUP_ITEM_SUM_vs_SUMMARY"].status == "pass"
 
 
 def test_cross_checks_mark_missing_values_as_skipped():

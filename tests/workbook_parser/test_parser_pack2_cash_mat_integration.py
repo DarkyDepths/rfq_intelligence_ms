@@ -42,6 +42,12 @@ def test_parser_wires_cash_flow_and_mat_breakup_into_cost_breakdown_profile():
     assert envelope["cost_breakdown_profile"]["bid_summary"] is not None
     assert envelope["cost_breakdown_profile"]["top_sheet_summary"] is not None
 
+    check_codes = {check["code"] for check in envelope["parser_report"]["cross_checks"]}
+    assert "CASH_FLOW_INFLOW_vs_BID_S_GRAND_TOTAL" in check_codes
+    assert "MAT_BREAKUP_TOTAL_vs_BID_S_MATERIAL" in check_codes
+    assert "MAT_BREAKUP_FINISH_WT_vs_BID_S_WEIGHT" in check_codes
+    assert "MAT_BREAKUP_ITEM_SUM_vs_SUMMARY" in check_codes
+
 
 def test_parser_soft_fail_mat_breakup_crash_keeps_parser_usable_and_reports_explicitly(monkeypatch):
     def _raise_extract(self):
@@ -64,6 +70,10 @@ def test_parser_soft_fail_mat_breakup_crash_keeps_parser_usable_and_reports_expl
 
     error_codes = {issue["code"] for issue in envelope["parser_report"]["errors"]}
     assert "MAT_BREAK_UP_EXTRACTION_FAILED" in error_codes
+
+    check_codes = {check["code"] for check in envelope["parser_report"]["cross_checks"]}
+    assert "CASH_FLOW_INFLOW_vs_BID_S_GRAND_TOTAL" in check_codes
+    assert "MAT_BREAKUP_TOTAL_vs_BID_S_MATERIAL" not in check_codes
 
     assert envelope["workbook_profile"]["rfq_identity"] is not None
     assert envelope["cost_breakdown_profile"]["bid_summary"] is not None

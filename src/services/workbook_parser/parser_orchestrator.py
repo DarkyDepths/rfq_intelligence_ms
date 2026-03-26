@@ -38,6 +38,11 @@ class WorkbookParserOrchestrator:
         cash_flow_result = self._try_extract("Cash Flow", CashFlowExtractor, CashFlowExtractionResult)
         mat_breakup_result = self._try_extract("Mat Break-up", MatBreakupExtractor, MatBreakupExtractionResult)
 
+        def _pack2_data(result):
+            if result is None or result.sheet_report.status == "failed":
+                return None
+            return {k: v for k, v in result.__dict__.items() if k not in {"anchor_checks", "issues", "sheet_report"}}
+
         checks = run_cross_checks(
             general_data={
                 "rfq_identity": general_result.rfq_identity,
@@ -54,6 +59,8 @@ class WorkbookParserOrchestrator:
                 "top_sheet_lines": top_sheet_result.top_sheet_lines,
                 "top_sheet_summary": top_sheet_result.top_sheet_summary,
             },
+            cash_flow_data=_pack2_data(cash_flow_result),
+            mat_breakup_data=_pack2_data(mat_breakup_result),
         )
 
         return build_envelope(
