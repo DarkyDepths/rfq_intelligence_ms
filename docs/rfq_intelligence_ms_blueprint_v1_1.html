@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rfq_intelligence_ms — Complete Architecture Blueprint v1.1</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* =============================================
+   DESIGN SYSTEM — RFQMGMT Intelligence Blueprint
+   ============================================= */
+:root {
+  --ink:       #1a1a2e;
+  --ink-2:     #2d2d44;
+  --ink-3:     #4a4a65;
+  --ink-4:     #6b6b85;
+  --ink-5:     #9090a5;
+  --bg:        #fafaf8;
+  --bg-warm:   #f5f4f0;
+  --bg-code:   #f0efe8;
+  --border:    #e5e4de;
+  --border-s:  #d5d4ce;
+
+  --amber:     #c2820a;
+  --amber-s:   #fef8e8;
+  --amber-m:   #f5e6b8;
+  --blue:      #1a6fb5;
+  --blue-s:    #eef5fc;
+  --blue-m:    #b8d8f0;
+  --green:     #1a8a5a;
+  --green-s:   #edf8f2;
+  --green-m:   #b8e8d0;
+  --red:       #c0392b;
+  --red-s:     #fdf0ee;
+  --red-m:     #f0c0b8;
+  --purple:    #7b2d8e;
+  --purple-s:  #f6eef8;
+  --purple-m:  #d8b8e0;
+  --cyan:      #0e7490;
+  --cyan-s:    #ecfdf5;
+  --teal:      #0d9488;
+
+  --radius:    8px;
+  --shadow:    0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14.5px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== LAYOUT ===== */
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ===== COVER ===== */
+.cover {
+  background: var(--ink);
+  color: #fff;
+  padding: 80px 0 60px;
+  position: relative;
+  overflow: hidden;
+}
+.cover::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--green), var(--blue), var(--amber), var(--purple));
+}
+.cover-ey {
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 24px;
+  font-weight: 500;
+}
+.cover h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 20px;
+}
+.cover h1 em {
+  font-style: italic;
+  color: rgba(255,255,255,0.55);
+  font-weight: 400;
+}
+.cover-sub {
+  font-size: 16px;
+  color: rgba(255,255,255,0.6);
+  max-width: 680px;
+  line-height: 1.7;
+  margin-bottom: 36px;
+}
+.cover-meta {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: rgba(255,255,255,0.35);
+}
+.cover-meta strong { color: rgba(255,255,255,0.55); }
+
+/* ===== SECTION HEADERS ===== */
+section {
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+}
+section:last-child { border-bottom: none; }
+
+.sh {
+  margin-bottom: 28px;
+}
+.sh-n {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink-5);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.sh h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.sh p {
+  font-size: 14px;
+  color: var(--ink-4);
+  max-width: 700px;
+}
+
+h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 28px 0 12px;
+}
+h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin: 20px 0 8px;
+}
+
+p { margin-bottom: 12px; }
+p + p { margin-top: 0; }
+
+/* ===== CARDS ===== */
+.card-grid {
+  display: grid;
+  gap: 16px;
+  margin: 16px 0;
+}
+.cols-2 { grid-template-columns: 1fr 1fr; }
+.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 720px) {
+  .cols-2, .cols-3 { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+}
+.card h4 { margin-top: 0; }
+.card p { font-size: 13.5px; color: var(--ink-3); line-height: 1.65; }
+
+.card-lbl {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.lbl-amber  { color: var(--amber); }
+.lbl-blue   { color: var(--blue); }
+.lbl-green  { color: var(--green); }
+.lbl-red    { color: var(--red); }
+.lbl-purple { color: var(--purple); }
+.lbl-cyan   { color: var(--cyan); }
+.lbl-teal   { color: var(--teal); }
+
+/* ===== CALLOUTS ===== */
+.callout {
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  margin: 16px 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+.callout strong { color: var(--ink); }
+.callout-amber  { background: var(--amber-s); border: 1px solid var(--amber-m); }
+.callout-blue   { background: var(--blue-s); border: 1px solid var(--blue-m); }
+.callout-green  { background: var(--green-s); border: 1px solid var(--green-m); }
+.callout-red    { background: var(--red-s); border: 1px solid var(--red-m); }
+.callout-purple { background: var(--purple-s); border: 1px solid var(--purple-m); }
+
+/* ===== CORE STATEMENT ===== */
+.core-stmt {
+  background: var(--ink);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 32px 36px;
+  margin: 20px 0;
+  position: relative;
+}
+.core-stmt .lbl {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 10px;
+}
+.core-stmt .txt {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  line-height: 1.5;
+  color: #fff;
+  margin-bottom: 14px;
+}
+.core-stmt .sub {
+  font-size: 13.5px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.7;
+}
+
+/* ===== TABLES ===== */
+.t {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 13px;
+}
+.t th {
+  background: var(--bg-warm);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--border-s);
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 0.3px;
+}
+.t td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.55;
+}
+.t tr:last-child td { border-bottom: none; }
+.t code {
+  background: var(--bg-code);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}
+
+/* ===== CODE / JSON ===== */
+.code-block {
+  background: var(--ink);
+  color: #e0dfd8;
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin: 16px 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+.code-block .ck { color: #7ec8e3; }
+.code-block .cv { color: #f0c674; }
+.code-block .cs { color: #b5bd68; }
+.code-block .cc { color: #6b7280; }
+
+code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  background: var(--bg-code);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--ink-2);
+}
+
+/* ===== ARTIFACT CARD ===== */
+.artifact-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 14px 0;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--blue);
+}
+.artifact-card.ac-green { border-left-color: var(--green); }
+.artifact-card.ac-amber { border-left-color: var(--amber); }
+.artifact-card.ac-purple { border-left-color: var(--purple); }
+.artifact-card.ac-red { border-left-color: var(--red); }
+.artifact-card.ac-cyan { border-left-color: var(--cyan); }
+
+.artifact-card h4 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.artifact-card .ac-class {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* ===== NOT-OWN LIST ===== */
+.not-own {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0;
+}
+@media (max-width: 640px) { .not-own { grid-template-columns: 1fr; } }
+.not-own-item {
+  font-size: 12.5px;
+  color: var(--red);
+  background: var(--red-s);
+  border: 1px solid var(--red-m);
+  border-radius: 6px;
+  padding: 8px 14px;
+}
+.not-own-item::before { content: '✕ '; font-weight: 700; }
+
+/* ===== OWNS LIST ===== */
+.owns-item {
+  font-size: 12.5px;
+  color: var(--green);
+  background: var(--green-s);
+  border: 1px solid var(--green-m);
+  border-radius: 6px;
+  padding: 8px 14px;
+}
+.owns-item::before { content: '✓ '; font-weight: 700; }
+
+.owns-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0;
+}
+@media (max-width: 640px) { .owns-grid { grid-template-columns: 1fr; } }
+
+/* ===== FLOW / PIPELINE ===== */
+.flow-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+.flow-box {
+  flex: 1;
+  min-width: 140px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 12.5px;
+  position: relative;
+}
+.flow-box::after {
+  content: '→';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-5);
+  font-size: 16px;
+}
+.flow-box:last-child::after { content: ''; }
+.flow-box strong { display: block; margin-bottom: 4px; color: var(--ink); }
+
+/* ===== DECISION BOX ===== */
+.decision {
+  background: var(--bg-warm);
+  border: 1px solid var(--border-s);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  margin: 16px 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+.decision strong { color: var(--ink); }
+
+/* ===== ENUM DISPLAY ===== */
+.enum-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 16px;
+}
+.enum-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11.5px;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 10px;
+  color: var(--ink-2);
+}
+
+/* ===== TOC ===== */
+.toc {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  margin: 32px 0;
+  box-shadow: var(--shadow);
+}
+.toc h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-family: 'Playfair Display', serif;
+}
+.toc-phase {
+  margin-bottom: 16px;
+}
+.toc-phase-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-5);
+  margin-bottom: 6px;
+}
+.toc a {
+  display: block;
+  padding: 4px 0;
+  color: var(--blue);
+  text-decoration: none;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.toc a:hover { text-decoration: underline; }
+.toc a .step-n {
+  color: var(--ink-5);
+  font-weight: 600;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ===== FOOTER ===== */
+.doc-footer {
+  text-align: center;
+  padding: 40px 0 60px;
+  font-size: 12px;
+  color: var(--ink-5);
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+}
+
+/* ===== PRINT ===== */
+@media print {
+  body { font-size: 12px; }
+  .cover { padding: 40px 0 30px; }
+  .cover h1 { font-size: 28px; }
+  .page { padding: 0 20px; }
+  section { padding: 24px 0 16px; }
+  .code-block { font-size: 10px; padding: 12px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================ -->
+<!-- COVER -->
+<!-- ============================================ -->
+<div class="cover">
+  <div class="page">
+    <div class="cover-ey">RFQMGMT Platform · Complete Architecture Blueprint</div>
+    <h1>rfq_intelligence_ms<br/><em>Cold-Start V1 — Full Design Specification</em></h1>
+    <div class="cover-sub">The complete constructive design of the shared intelligence engine: mission, boundaries, artifacts, schemas, normalization rules, mapping logic, and integration architecture. 16 validated design steps consolidated into one definitive reference document.</div>
+    <div class="cover-meta">
+      <div><strong>Version</strong> 1.1 — Blueprint (Refined)</div>
+      <div><strong>Status</strong> Validated Conceptual Architecture</div>
+      <div><strong>Context</strong> GHI / Albassam Group × BACAB Consulting</div>
+      <div><strong>Date</strong> March 2026</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- TABLE OF CONTENTS -->
+<!-- ============================================ -->
+<div class="page">
+  <div class="toc">
+    <h3>Blueprint Contents</h3>
+
+    <div class="toc-phase">
+      <div class="toc-phase-title">Phase A — Mission &amp; Boundaries</div>
+      <a href="#s1"><span class="step-n">Step 1</span> Mission, Ownership &amp; Cold-Start Scope</a>
+      <a href="#s2"><span class="step-n">Step 2</span> V1 Artifact Set — The Six Artifacts</a>
+    </div>
+
+    <div class="toc-phase">
+      <div class="toc-phase-title">Phase B — Intake Intelligence Design</div>
+      <a href="#s3"><span class="step-n">Step 3</span> rfq_intake_profile — Top-Level Structure</a>
+      <a href="#s4"><span class="step-n">Step 4</span> canonical_project_profile — Field-by-Field Schema</a>
+      <a href="#s5"><span class="step-n">Step 5</span> Normalization Rules &amp; Null Semantics</a>
+      <a href="#s6"><span class="step-n">Step 6</span> Shared Enum Dictionaries &amp; Controlled Vocabularies</a>
+    </div>
+
+    <div class="toc-phase">
+      <div class="toc-phase-title">Phase C — Extraction &amp; Mapping Logic</div>
+      <a href="#s7"><span class="step-n">Step 7</span> Raw → Canonical Mapping Rules</a>
+      <a href="#s8"><span class="step-n">Step 8</span> process_flags — End-to-End Resolution</a>
+      <a href="#s9"><span class="step-n">Step 9</span> applicable_standards — End-to-End Resolution</a>
+    </div>
+
+    <div class="toc-phase">
+      <div class="toc-phase-title">Phase D — Workbook Intelligence Design</div>
+      <a href="#s10"><span class="step-n">Step 10</span> Workbook-Side Canonical Mirror</a>
+      <a href="#s11"><span class="step-n">Step 11</span> workbook_profile — Full Top-Level Schema</a>
+      <a href="#s12"><span class="step-n">Step 12</span> cost_breakdown_profile — Field-by-Field Schema</a>
+    </div>
+
+    <div class="toc-phase">
+      <div class="toc-phase-title">Phase E — Bridge &amp; Consumer Artifacts</div>
+      <a href="#s13"><span class="step-n">Step 13</span> workbook_review_report — The Bridge Artifact</a>
+      <a href="#s14"><span class="step-n">Step 14</span> intelligence_briefing — Cold-Start Design</a>
+      <a href="#s15"><span class="step-n">Step 15</span> rfq_intelligence_snapshot — Consumer Read Model</a>
+    </div>
+
+    <div class="toc-phase">
+      <div class="toc-phase-title">Phase F — Integration &amp; API Surface</div>
+      <a href="#s16"><span class="step-n">Step 16</span> Integration Flow, Events, API &amp; Persistence</a>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- STEP 1 — MISSION & BOUNDARIES -->
+  <!-- ============================================ -->
+  <section id="s1">
+    <div class="sh">
+      <div class="sh-n">Step 01 — Mission &amp; Boundaries</div>
+      <h2>Mission, Ownership &amp; Cold-Start Scope</h2>
+      <p>Defining what rfq_intelligence_ms is, what it owns, what it must not own, and what is realistically feasible in V1 with one real RFQ package and one real workbook.</p>
+    </div>
+
+    <div class="core-stmt">
+      <div class="lbl">Validated Mission Statement</div>
+      <div class="txt">rfq_intelligence_ms is a separate, read-heavy analytical microservice that transforms RFQ source material and historical records into persistent intelligence artifacts for multiple consumers.</div>
+      <div class="sub">It does not manage lifecycle state, does not send actions, does not own conversation, and does not mutate the operational backbone owned by rfq_manager_ms. Intelligence produces insight; other services decide what to do with it.</div>
+    </div>
+
+    <h3>What It Owns</h3>
+    <div class="owns-grid">
+      <div class="owns-item">Document / RFQ parsing</div>
+      <div class="owns-item">Historical matching</div>
+      <div class="owns-item">Cost-range support logic</div>
+      <div class="owns-item">Supplier / client / historical intelligence</div>
+      <div class="owns-item">KPI and analytical computation</div>
+      <div class="owns-item">Its own historical / analytical database</div>
+      <div class="owns-item">Persistent intelligence artifacts</div>
+    </div>
+
+    <h3>What It Must Not Own</h3>
+    <div class="not-own">
+      <div class="not-own-item">Workflows, stages, or stage transitions</div>
+      <div class="not-own-item">Reminders, communication, notifications</div>
+      <div class="not-own-item">Chatbot sessions, intent detection, conversation history</div>
+      <div class="not-own-item">IAM / auth</div>
+      <div class="not-own-item">File storage</div>
+      <div class="not-own-item">Workflow execution decisions</div>
+      <div class="not-own-item">UI-specific presentation logic</div>
+    </div>
+
+    <h3>Ownership Split</h3>
+    <div class="card-grid cols-2">
+      <div class="card" style="border-top: 3px solid var(--blue);">
+        <div class="card-lbl lbl-blue">rfq_manager_ms</div>
+        <h4>Owns "Today" — Operational Truth</h4>
+        <p>RFQ lifecycle state, workflows, stages, subtasks, files, reminders. The operational core and stable backend foundation.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--amber);">
+        <div class="card-lbl lbl-amber">rfq_intelligence_ms</div>
+        <h4>Owns "Memory &amp; Insight" — Analytical Truth</h4>
+        <p>Parsing, extraction, historical matching, cost analysis, intelligence artifacts. The shared analytical brain of the platform.</p>
+      </div>
+    </div>
+
+    <h3>Cold-Start Reality</h3>
+    <div class="callout callout-amber">
+      <strong>Current data:</strong> One real corresponding GHI estimation workbook (fixed template reference). This is the "golden reference pair." The intelligence engine starts empty and capabilities must be released in phases matching available data.
+    </div>
+
+    <p><strong>V1 is a document-and-workbook intelligence service first, and a historical analytics service later.</strong></p>
+
+    <div class="card-grid cols-2">
+      <div class="card" style="border-top: 3px solid var(--green);">
+        <div class="card-lbl lbl-green">Layer A — Build Now, User-Facing</div>
+        <p>RFQ intake parsing. Briefing generation. Workbook parsing. ZIP ↔ workbook comparison. Structural/completeness checks based on template logic. Persistence of intelligence artifacts and explanations.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--ink-5);">
+        <div class="card-lbl" style="color: var(--ink-5);">Layer B — Scaffold Now, Dormant</div>
+        <p>Similarity engine interfaces. Benchmark engine interfaces. Confidence model. Historical tables for outcomes/comparables. Placeholders for cost-envelope and anomaly families needing history. Explicitly marked "insufficient historical base."</p>
+      </div>
+    </div>
+
+    <h3>V1 Check Classification</h3>
+    <table class="t">
+      <thead><tr><th>Check Type</th><th>Classification</th><th>V1 Status</th></tr></thead>
+      <tbody>
+        <tr><td>Workbook template checks</td><td>Deterministic</td><td>Fully V1-ready — template is fixed and known</td></tr>
+        <tr><td>ZIP/package convention checks</td><td>Heuristic</td><td>Reliable only where the package follows known Aramco MR structure; otherwise clearly marked</td></tr>
+        <tr><td>Benchmark/outlier claims</td><td>Historical</td><td>Not V1-ready — requires data maturity</td></tr>
+        <tr><td>Similarity claims</td><td>Historical</td><td>Not V1-ready — schema-ready but dormant</td></tr>
+        <tr><td>Win-probability / pricing guidance</td><td>Historical</td><td>Not V1-ready — requires outcome feedback loops</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Demo &amp; Mock Data Policy</h3>
+    <div class="decision">
+      <strong>Golden reference pair:</strong> The 1 real RFQ + 1 real workbook is the validation anchor. All design and parsing logic is validated against this pair first.<br><br>
+      <strong>Synthetic fixtures:</strong> Allowed for screen states, API contract testing, UI demos, and test scenarios. Clearly labeled and stored separately.<br><br>
+      <strong>Hard rule:</strong> Never mix synthetic fixtures into claimed historical intelligence. Never use mock data to claim realistic benchmarks, win probabilities, or trustworthy cost ranges.
+    </div>
+
+    <div class="callout callout-green">
+      <strong>Validated Conclusion:</strong> <code>rfq_intelligence_ms</code> V1 is a cold-start intelligence service centered on extraction, briefing, workbook understanding, and explainable comparison between "what was requested" vs "how GHI prepared the estimate." Historical benchmarking and predictive outputs remain scaffolded but not active until real data arrives.
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 2 — V1 ARTIFACT SET -->
+  <!-- ============================================ -->
+  <section id="s2">
+    <div class="sh">
+      <div class="sh-n">Step 02 — Artifact Design</div>
+      <h2>V1 Artifact Set — The Six Artifacts</h2>
+      <p>The exact outputs rfq_intelligence_ms persists and serves for a single RFQ. All proactive intelligence outputs are first-class persistent artifacts with status, timestamp, and version.</p>
+    </div>
+
+    <div class="artifact-card">
+      <div class="ac-class lbl-amber">Artifact 1 — Partly Deterministic, Partly Heuristic</div>
+      <h4>rfq_intake_profile</h4>
+      <p>Structured extraction artifact from the ZIP/MR package. Normalizes the incoming RFQ into one machine-readable profile: folder structure, detected document families, extracted standards, vessel/project metadata, material/tonnage/dimensions, RVL/mandated vendor indicators, scope/QA-QC fields, and extraction provenance with confidence. This is the foundation — every other intelligence output depends on it, not on raw files.</p>
+    </div>
+
+    <div class="artifact-card ac-green">
+      <div class="ac-class lbl-green">Artifact 2 — Mixed (Core Sections Active, Historical Sections Future-Only)</div>
+      <h4>intelligence_briefing</h4>
+      <p>The flagship proactive output. Generated automatically when the RFQ enters the system, before the first human opens the RFQ. Stored as a first-class dossier with status, timestamps, confidence per section, and version. In cold start, active sections include document understanding and compliance/risk flags; similarity and cost envelope sections are present but marked unavailable.</p>
+    </div>
+
+    <div class="artifact-card" style="border-left-color: var(--cyan);">
+      <div class="ac-class lbl-cyan">Artifact 3 — Deterministic</div>
+      <h4>workbook_profile</h4>
+      <p>Structured extraction artifact from the GHI estimation workbook. Contains workbook metadata, template recognition, parsed key sheets, item tables, summary totals, cost breakdown, and extracted comparable fields shared with intake profile. The cleanest V1 artifact because the workbook template is fixed and deterministic to parse.</p>
+    </div>
+
+    <div class="artifact-card ac-red">
+      <div class="ac-class lbl-red">Artifact 4 — Mostly Deterministic in V1</div>
+      <h4>workbook_review_report</h4>
+      <p>The first real bridge between intake and workbook intelligence. Contains three anomaly families: structural/completeness (fully active), briefing-vs-actual (selectively active), and benchmark/outlier (schema-ready but suppressed). Every finding phrased as "this deserves review," never "this is wrong."</p>
+    </div>
+
+    <div class="artifact-card ac-purple">
+      <div class="ac-class lbl-purple">Artifact 5 — Deterministic Assembly</div>
+      <h4>rfq_intelligence_snapshot</h4>
+      <p>Consumer-facing read model. A single assembled projection per RFQ containing latest states of all intelligence artifacts, section availability, confidence markers, and consumer hints. Simplifies UI and chatbot integration — consumers read the snapshot rather than stitching internal artifacts.</p>
+    </div>
+
+    <div class="artifact-card ac-amber">
+      <div class="ac-class lbl-amber">Artifact 6 — Deterministic</div>
+      <h4>rfq_analytical_record</h4>
+      <p>Not user-facing. The seed for the future analytical store. Lifecycle: created as a stub on <code>rfq.created</code> with intake-extracted normalized features and readiness flags; enriched on <code>workbook.uploaded</code> with workbook normalized features and cost metrics; enriched again on <code>outcome.recorded</code> with result/outcome fields and provenance. Every new RFQ enriches this store from its first moment in the system, so future matching and benchmarking improve over time.</p>
+    </div>
+
+    <h3>What Is Explicitly Future-Only</h3>
+    <div class="not-own">
+      <div class="not-own-item">True similarity_matches</div>
+      <div class="not-own-item">True cost_envelope_report</div>
+      <div class="not-own-item">True client_history_report</div>
+      <div class="not-own-item">True supplier_intelligence_report</div>
+      <div class="not-own-item">True benchmark_outlier_report</div>
+      <div class="not-own-item">Bid strategy / win probability artifacts</div>
+    </div>
+    <p style="font-size: 13px; color: var(--ink-4);">These all appear in the target architecture but require historical data maturity. In V1 they exist as empty sections, "not enough historical data" markers, or synthetic demo fixtures clearly separated from real intelligence.</p>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 3 — INTAKE PROFILE STRUCTURE -->
+  <!-- ============================================ -->
+  <section id="s3">
+    <div class="sh">
+      <div class="sh-n">Step 03 — Intake Intelligence</div>
+      <h2>rfq_intake_profile — Top-Level Structure</h2>
+      <p>The normalized intake artifact. Not the briefing — the structured extraction that makes the briefing possible and enables comparison with the workbook.</p>
+    </div>
+
+    <p>The intake profile has two core responsibilities simultaneously: represent what was actually extracted from the MR/ZIP package, and expose the canonical shared fields that later allow comparison with the workbook.</p>
+
+    <h3>8 Top-Level Blocks</h3>
+    <table class="t">
+      <thead><tr><th>Block</th><th>Role</th><th>Core</th></tr></thead>
+      <tbody>
+        <tr><td><code>artifact_meta</code></td><td>Artifact envelope: artifact_id, rfq_id, type, status (pending|partial|complete|failed), version, timestamps, source_event_id, schema_version</td><td rowspan="4" style="vertical-align: middle; text-align: center; font-weight: 600; color: var(--blue);">Core A<br>Extraction Truth</td></tr>
+        <tr><td><code>source_package</code></td><td>What was ingested: package reference, file/folder count, size, hash, ingestion timestamp. Intelligence consumes but does not own files.</td></tr>
+        <tr><td><code>package_structure</code></td><td>Deterministic structural map: detected top-level folders, normalized labels, recognized doc families, expected-vs-found checks, convention confidence, anomalies.</td></tr>
+        <tr><td><code>document_understanding</code></td><td>Richer extracted content: document-level summaries, extracted entities by source, scope notes, QA/QC notes, standards from filenames vs documents, vendor/RVL findings.</td></tr>
+        <tr><td><code>canonical_project_profile</code></td><td>The most important block — normalized shared fields for later comparison with workbook. Contains the shared comparison vocabulary.</td><td rowspan="3" style="vertical-align: middle; text-align: center; font-weight: 600; color: var(--green);">Core B<br>Comparison Readiness</td></tr>
+        <tr><td><code>field_evidence</code></td><td>Explainability layer: per-field source files, extraction method (deterministic|llm|hybrid), confidence, ambiguity notes.</td></tr>
+        <tr><td><code>quality_and_gaps</code></td><td>Completeness and trust: missing folders/doc families, ambiguous fields, conflicting values, extraction coverage score, cold-start limitations.</td></tr>
+        <tr><td><code>downstream_readiness</code></td><td>Readiness flags: briefing_ready, workbook_comparison_ready_fields, compliance_flagging_ready, historical_matching_ready (probably false), requires_human_review.</td><td style="text-align: center; color: var(--ink-4);">Meta</td></tr>
+      </tbody>
+    </table>
+
+    <h3>What Must NOT Be Inside rfq_intake_profile</h3>
+    <div class="not-own">
+      <div class="not-own-item">Similar projects</div>
+      <div class="not-own-item">Cost envelope</div>
+      <div class="not-own-item">Supplier performance intelligence</div>
+      <div class="not-own-item">Win/loss analytics</div>
+      <div class="not-own-item">Narrative briefing text</div>
+      <div class="not-own-item">Workbook-side judgments</div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 4 — CANONICAL PROJECT PROFILE -->
+  <!-- ============================================ -->
+  <section id="s4">
+    <div class="sh">
+      <div class="sh-n">Step 04 — Field-by-Field Schema</div>
+      <h2>canonical_project_profile — The Shared Comparison Surface</h2>
+      <p>The normalized, comparison-ready field set that later aligns with workbook extraction. Contains only normalized business fields, shared comparison fields, and future similarity fields extractable at intake.</p>
+    </div>
+
+    <h3>Band A — Identity / RFQ Context</h3>
+    <table class="t">
+      <thead><tr><th>Field</th><th>Type</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>project_family</code></td><td>Closed enum</td><td>Highest-level normalized class: pressure_vessel, heat_exchanger, column, etc. Core comparison dimension.</td></tr>
+        <tr><td><code>project_subtype</code></td><td>Controlled-open (optional)</td><td>More precise variant: horizontal_vessel, vertical_vessel, shell_tube_hex. Seed list tied to each project_family value. Extensible without schema change as new RFQs introduce subtypes.</td></tr>
+        <tr><td><code>client_name</code></td><td>Normalized string</td><td>Normalized bidding client name.</td></tr>
+        <tr><td><code>end_customer_name</code></td><td>Normalized string (nullable)</td><td>Final beneficiary/operator if different from bidding client.</td></tr>
+        <tr><td><code>rfq_region</code></td><td>Normalized string (nullable)</td><td>Country/market/region if extractable.</td></tr>
+        <tr><td><code>delivery_location</code></td><td>Normalized string (nullable)</td><td>Delivery destination if explicit.</td></tr>
+        <tr><td><code>requested_delivery_window</code></td><td>Structured object</td><td>requested_date, duration_value, duration_unit, delivery_band. Handles both target dates and duration bands.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Band B — Technical / Product Core</h3>
+    <table class="t">
+      <thead><tr><th>Field</th><th>Type</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>equipment_type</code></td><td>Controlled-open</td><td>Operational item label: horizontal_vessel, shell_and_tube_heat_exchanger. Uses alias dictionary. Not the comparison anchor — project_family + project_subtype are the comparison pair.</td></tr>
+        <tr><td><code>quantity</code></td><td>Structured: value, unit, basis</td><td>Normalized count with explicit unit (item|set|lot|assembly) and basis (total_project|per_line_item|unknown).</td></tr>
+        <tr><td><code>material_family</code></td><td>Closed enum</td><td>Inferred from grade: carbon_steel, stainless_steel, duplex, etc. One of the strongest similarity drivers.</td></tr>
+        <tr><td><code>material_grade_primary</code></td><td>Normalized open string</td><td>Dominant grade when available (e.g., SA-516 Gr 70). Formatting normalized, vocabulary open.</td></tr>
+        <tr><td><code>material_grade_secondary</code></td><td>Array of normalized strings</td><td>Additional grades if mixed materials. Will eventually need component-tagging (shell, heads, nozzles).</td></tr>
+        <tr><td><code>dimension_profile</code></td><td>Structured: diameter_mm, length_mm, thickness_mm, dimension_text_raw_normalized</td><td>Both structured numeric fields and fallback text. Avoids fake precision when only partial dimensions available.</td></tr>
+        <tr><td><code>weight_profile</code></td><td>Structured: value_kg, basis, state</td><td>Canonical storage in kg. Basis is single_item or total_project. State uses 4-state semantics. Never estimated from dimensions in V1.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Band C — Standards / Process / Compliance</h3>
+    <table class="t">
+      <thead><tr><th>Field</th><th>Type</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>applicable_standards</code></td><td>Controlled-open array</td><td>Canonicalized codes: ASME VIII Div 1, SAMSS-010, SAES-A-004. Stored at specific code level; family derived as computed tag.</td></tr>
+        <tr><td><code>process_flags</code></td><td>Structured object</td><td>rt_requirement (full|spot|none|unknown|ambiguous), pwht_required, u_stamp_required, nb_registration_required. Major cost/comparison drivers.</td></tr>
+        <tr><td><code>qa_qc_requirements</code></td><td>Controlled-open tag array</td><td>hydrotest, pmi, third_party_inspection, mdr_required, etc.</td></tr>
+        <tr><td><code>certification_requirements</code></td><td>Controlled-open array</td><td>u_stamp, nb, specific_client_certification.</td></tr>
+        <tr><td><code>mandated_vendors</code></td><td>Normalized string array</td><td>Vendor names from RVL/vendor folders. Not enumed in V1.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Band D — Execution / Commercial Context</h3>
+    <table class="t">
+      <thead><tr><th>Field</th><th>Type</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>scope_of_supply</code></td><td>Structured: scope_tags[], scope_summary_short</td><td>Tags: design, fabrication, testing, painting, delivery, etc. Comparable and filterable.</td></tr>
+        <tr><td><code>supplier_constraints</code></td><td>Controlled-open tags</td><td>rvl_present, approved_vendor_list_only, single_source_constraint.</td></tr>
+        <tr><td><code>commercial_constraints</code></td><td>Controlled-open tags</td><td>liquidated_damages_present, performance_bond_required. Optional, nullable.</td></tr>
+        <tr><td><code>timeline_profile</code></td><td>Structured object</td><td>delivery_duration_value, delivery_duration_unit, schedule_intensity_band.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>V1 Must-Have Comparison Fields</h3>
+    <div class="callout callout-blue">
+      <strong>These 8 fields must work flawlessly on both intake and workbook sides:</strong> project_family / equipment_type, quantity, material_family, material_grade_primary, weight_profile, applicable_standards, process_flags, mandated_vendors. Everything else is present but nullable.
+    </div>
+
+    <h3>What Must NOT Be in canonical_project_profile</h3>
+    <p><code>cost_per_ton</code> — even though the brief mentions it among shared comparables, it is not a raw intake fact from the ZIP. It belongs to workbook/historical intelligence. Intake keeps weight_profile, technical drivers, and compliance/process drivers, but never premature pricing fields.</p>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 5 — NORMALIZATION RULES -->
+  <!-- ============================================ -->
+  <section id="s5">
+    <div class="sh">
+      <div class="sh-n">Step 05 — Normalization Contract</div>
+      <h2>Normalization Rules &amp; Null Semantics</h2>
+      <p>The rules that make the intake side and workbook side actually meet. Every canonical field carries one normalized value for comparison; evidence and ambiguity stay outside.</p>
+    </div>
+
+    <h3>The 10 Normalization Rules</h3>
+
+    <h4>Rule 1 — 4-State Null Semantics</h4>
+    <div class="enum-row">
+      <span class="enum-tag">known</span>
+      <span class="enum-tag">unknown</span>
+      <span class="enum-tag">not_applicable</span>
+      <span class="enum-tag">ambiguous</span>
+    </div>
+    <p>For must-have comparison fields (project_family, equipment_type, material_family, material_grade_primary, weight_profile, process_flags), use explicit state tracking: <code>{"value": "...", "state": "known | unknown | not_applicable | ambiguous"}</code>. For lighter fields, nullable values are sufficient.</p>
+    <div class="decision"><strong>Why this matters:</strong> <code>unknown</code> means "maybe later with better docs." <code>not_applicable</code> means "should not be expected." <code>ambiguous</code> means "needs review." Plain <code>null</code> loses business meaning.</div>
+
+    <h4>Rule 2 — Controlled Vocabulary Before Free Text</h4>
+    <p>If a field is used for comparison, similarity, filtering, or workbook matching, it must use a controlled vocabulary. The normalization pipeline is always: raw extraction → synonym mapping → canonical token.</p>
+
+    <h4>Rule 3 — Raw Text Only as Fallback</h4>
+    <p>Keep structured normalized subfields when possible. Keep one fallback normalized text field. Never compare long raw prose directly.</p>
+
+    <h4>Rule 4 — Units Canonicalized at Write Time</h4>
+    <table class="t">
+      <thead><tr><th>Dimension</th><th>Canonical Unit</th></tr></thead>
+      <tbody>
+        <tr><td>Dimensions</td><td>mm</td></tr>
+        <tr><td>Weight</td><td>kg</td></tr>
+        <tr><td>Duration</td><td>value + unit (day|week|month) — comparison code converts consistently</td></tr>
+        <tr><td>Quantity</td><td>numeric + explicit unit</td></tr>
+        <tr><td>Dates</td><td>ISO date</td></tr>
+      </tbody>
+    </table>
+    <p>Store canonical numeric value in the profile; original unit preserved in field_evidence only. Downstream comparison code never converts units on the fly. <strong>Exception — duration:</strong> stored as value + unit (day|week|month) in the canonical profile, not forced to days. Comparison code handles conversion consistently. This avoids lossy conversion where "1 month" and "30 days" carry different business signals.</p>
+
+    <h4>Rule 5 — Multi-Value Handling</h4>
+    <p>For array fields (applicable_standards, material_grade_secondary, mandated_vendors, qa_qc_requirements, scope_tags): deduplicate, sort deterministically, canonicalize synonyms, preserve order only if business meaning depends on it.</p>
+
+    <h4>Rule 6 — Process Flags Use Tri-State or Richer</h4>
+    <p>RT/PWHT/U-Stamp/NB never use plain boolean. Use explicit categorical states: <code>full | spot | none | unknown | ambiguous</code> for RT, <code>yes | no | unknown | ambiguous</code> for others.</p>
+
+    <h4>Rule 7 — Primary vs Secondary Value Split</h4>
+    <p>For fields where one dominant value matters for comparison (especially material grade), split primary from secondary. The future similarity engine needs a dominant comparable value first.</p>
+
+    <h4>Rule 8 — Never Normalize Into Unsupported Business Claims</h4>
+    <p>No cost-per-ton, pricing assumptions, benchmark class, win probability, or "complexity score" in the intake canonical profile. Those are intelligence outputs requiring later stages or historical data.</p>
+
+    <h4>Rule 9 — Shared Enums Across Intake and Workbook</h4>
+    <div class="callout callout-red">
+      <strong>Non-negotiable shared enums:</strong> project_family, material_family, process_flags.*, quantity basis, weight basis, delivery duration unit — all must be defined once and reused by both extractors. Intake and workbook must never invent separate taxonomies. This is the core guarantee behind the overlapping extraction templates.<br><br>
+      <strong>Shared controlled-open vocabularies:</strong> project_subtype, equipment_type — use seed lists with alias dictionaries, extensible without schema change.
+    </div>
+
+    <h4>Rule 10 — Confidence Outside the Canonical Value</h4>
+    <p>Do not store confidence inside the canonical comparison block. Canonical profile stores the normalized value. field_evidence stores extraction method and confidence. quality_and_gaps stores whether the field is ambiguous or weak. This keeps the comparable surface clean.</p>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 6 — ENUM DICTIONARIES -->
+  <!-- ============================================ -->
+  <section id="s6">
+    <div class="sh">
+      <div class="sh-n">Step 06 — Vocabularies</div>
+      <h2>Shared Enum Dictionaries &amp; Controlled Vocabularies</h2>
+      <p>Three tiers: closed enums (strict, shared), controlled-open vocabularies (canonical format, extensible), and normalized free text (formatting only).</p>
+    </div>
+
+    <h3>Tier 1 — Closed Enums (Locked for V1)</h3>
+
+    <h4>project_family</h4>
+    <div class="enum-row">
+      <span class="enum-tag">pressure_vessel</span>
+      <span class="enum-tag">heat_exchanger</span>
+      <span class="enum-tag">column</span>
+      <span class="enum-tag">tank</span>
+      <span class="enum-tag">reactor</span>
+      <span class="enum-tag">drum</span>
+      <span class="enum-tag">separator</span>
+      <span class="enum-tag">skid</span>
+      <span class="enum-tag">piping_package</span>
+      <span class="enum-tag">structural_package</span>
+      <span class="enum-tag">other_equipment</span>
+      <span class="enum-tag">unknown</span>
+    </div>
+
+    <h4>material_family</h4>
+    <div class="enum-row">
+      <span class="enum-tag">carbon_steel</span>
+      <span class="enum-tag">stainless_steel</span>
+      <span class="enum-tag">duplex</span>
+      <span class="enum-tag">super_duplex</span>
+      <span class="enum-tag">alloy_steel</span>
+      <span class="enum-tag">nickel_alloy</span>
+      <span class="enum-tag">clad_material</span>
+      <span class="enum-tag">mixed</span>
+      <span class="enum-tag">other</span>
+      <span class="enum-tag">unknown</span>
+    </div>
+
+    <h4>quantity.unit</h4>
+    <div class="enum-row">
+      <span class="enum-tag">item</span><span class="enum-tag">set</span><span class="enum-tag">lot</span><span class="enum-tag">assembly</span><span class="enum-tag">unknown</span>
+    </div>
+
+    <h4>quantity.basis</h4>
+    <div class="enum-row">
+      <span class="enum-tag">total_project</span><span class="enum-tag">per_line_item</span><span class="enum-tag">unknown</span>
+    </div>
+
+    <h4>weight_profile.basis</h4>
+    <div class="enum-row">
+      <span class="enum-tag">single_item</span><span class="enum-tag">total_project</span><span class="enum-tag">unknown</span>
+    </div>
+
+    <h4>process_flags.rt_requirement</h4>
+    <div class="enum-row">
+      <span class="enum-tag">full</span><span class="enum-tag">spot</span><span class="enum-tag">none</span><span class="enum-tag">unknown</span><span class="enum-tag">ambiguous</span>
+    </div>
+
+    <h4>process_flags — pwht / u_stamp / nb</h4>
+    <div class="enum-row">
+      <span class="enum-tag">yes</span><span class="enum-tag">no</span><span class="enum-tag">unknown</span><span class="enum-tag">ambiguous</span>
+    </div>
+
+    <h4>duration_unit</h4>
+    <div class="enum-row">
+      <span class="enum-tag">day</span><span class="enum-tag">week</span><span class="enum-tag">month</span><span class="enum-tag">unknown</span>
+    </div>
+
+    <h4>field_state</h4>
+    <div class="enum-row">
+      <span class="enum-tag">known</span><span class="enum-tag">unknown</span><span class="enum-tag">not_applicable</span><span class="enum-tag">ambiguous</span>
+    </div>
+
+    <h3>Tier 2 — Controlled-Open Vocabularies</h3>
+    <p>These have canonical forms and seed lists, but new values can appear without schema change.</p>
+
+    <h4>project_subtype — Seed List (per project_family)</h4>
+    <div class="code-block"><span class="cc">// Seed subtypes tied to each project_family value</span>
+{
+  <span class="ck">"pressure_vessel"</span>:    [<span class="cs">"horizontal"</span>, <span class="cs">"vertical"</span>, <span class="cs">"spherical"</span>],
+  <span class="ck">"heat_exchanger"</span>:     [<span class="cs">"shell_and_tube"</span>, <span class="cs">"plate"</span>, <span class="cs">"air_cooled"</span>],
+  <span class="ck">"column"</span>:             [<span class="cs">"trayed"</span>, <span class="cs">"packed"</span>],
+  <span class="ck">"separator"</span>:          [<span class="cs">"two_phase"</span>, <span class="cs">"three_phase"</span>],
+  <span class="ck">"tank"</span>:               [<span class="cs">"atmospheric"</span>, <span class="cs">"pressurized"</span>]
+}
+<span class="cc">// Extensible: new subtypes can be added per family without schema migration</span></div>
+
+    <h4>equipment_type — Alias Dictionary Seed</h4>
+    <div class="code-block"><span class="cc">// Canonical token → accepted aliases</span>
+{
+  <span class="ck">"horizontal_vessel"</span>:                  [<span class="cs">"horizontal vessel"</span>, <span class="cs">"horizontal drum"</span>, <span class="cs">"h vessel"</span>],
+  <span class="ck">"vertical_vessel"</span>:                    [<span class="cs">"vertical vessel"</span>, <span class="cs">"vessel vertical"</span>, <span class="cs">"v vessel"</span>],
+  <span class="ck">"shell_and_tube_heat_exchanger"</span>:       [<span class="cs">"s&t exchanger"</span>, <span class="cs">"shell and tube"</span>, <span class="cs">"heat exchanger"</span>],
+  <span class="ck">"separator"</span>:                           [<span class="cs">"separator"</span>, <span class="cs">"2-phase separator"</span>, <span class="cs">"3-phase separator"</span>],
+  <span class="ck">"storage_tank"</span>:                        [<span class="cs">"tank"</span>, <span class="cs">"storage tank"</span>],
+  <span class="ck">"column"</span>:                              [<span class="cs">"column"</span>, <span class="cs">"tower"</span>],
+  <span class="ck">"reactor"</span>:                             [<span class="cs">"reactor"</span>],
+  <span class="ck">"skid"</span>:                                [<span class="cs">"skid"</span>, <span class="cs">"module"</span>, <span class="cs">"package skid"</span>]
+}</div>
+
+    <h4>applicable_standards — Seed List</h4>
+    <p>Store at specific code level; derive family as computed tag. "ASME VIII Div 1" and "ASME VIII Div 2" are distinct in comparison but roll up to "ASME" for filtering.</p>
+    <div class="enum-row">
+      <span class="enum-tag">ASME VIII Div 1</span><span class="enum-tag">ASME VIII Div 2</span><span class="enum-tag">TEMA</span><span class="enum-tag">FATI</span><span class="enum-tag">SAMSS-*</span><span class="enum-tag">SAES-*</span><span class="enum-tag">SAEP-*</span><span class="enum-tag">API *</span><span class="enum-tag">ASTM *</span><span class="enum-tag">NACE</span>
+    </div>
+
+    <h4>Other Controlled-Open Seeds</h4>
+    <table class="t">
+      <thead><tr><th>Vocabulary</th><th>Seed Values</th></tr></thead>
+      <tbody>
+        <tr><td><code>qa_qc_requirements</code></td><td>hydrotest, pmi, radiography, pwht, third_party_inspection, mdr_required, painting_system_special, dimensional_inspection, material_traceability</td></tr>
+        <tr><td><code>scope_tags</code></td><td>design, engineering, material_supply, fabrication, assembly, testing, inspection, painting, packing, delivery, erection_excluded, installation_excluded</td></tr>
+        <tr><td><code>supplier_constraints</code></td><td>rvl_present, approved_vendor_list_only, single_source_constraint, client_mandated_vendor</td></tr>
+        <tr><td><code>commercial_constraints</code></td><td>liquidated_damages_present, performance_bond_required, special_payment_terms, retention_present</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Tier 3 — Open but Normalized</h3>
+    <p>Normalize formatting only. No enum. Fields: <code>material_grade_primary</code>, <code>material_grade_secondary</code>, <code>client_name</code>, <code>end_customer_name</code>, <code>mandated_vendors</code>.</p>
+    <p>Rules: standardize spaces/hyphens, normalize GR/GRADE, uppercase letter-number codes consistently, trim whitespace, remove duplicate punctuation variants.</p>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 7 — RAW TO CANONICAL MAPPING -->
+  <!-- ============================================ -->
+  <section id="s7">
+    <div class="sh">
+      <div class="sh-n">Step 07 — Mapping Logic</div>
+      <h2>Raw → Canonical Mapping Rules</h2>
+      <p>The pipeline that makes the schema executable: raw evidence → extractor output → canonical mapper → canonical field. Deterministic wherever possible, conservative when uncertain, shared across intake and workbook for overlapping fields.</p>
+    </div>
+
+    <h3>5 Global Mapping Rules</h3>
+    <div class="card-grid cols-2">
+      <div class="card"><h4>Rule A — Deterministic Beats Inferred</h4><p>Workbook fixed cells, folder position, BOM columns, standards filenames outrank any LLM interpretation.</p></div>
+      <div class="card"><h4>Rule B — One Mapper, Many Extractors</h4><p>Intake and workbook extractors can differ, but they must feed the same canonical mapper for shared fields. Prevents one side writing "horizontal_vessel" and the other "H vessel."</p></div>
+      <div class="card"><h4>Rule C — No Forced Guessing</h4><p>If the mapper cannot safely choose, output <code>unknown</code> or <code>ambiguous</code>. Never manufacture a clean value for UI aesthetics.</p></div>
+      <div class="card"><h4>Rule D — Value First, Evidence Elsewhere</h4><p>The mapper outputs only normalized values. Why it picked them belongs in field_evidence.</p></div>
+    </div>
+    <div class="card" style="margin: 0 0 16px;"><h4>Rule E — Precedence Table per Field</h4><p>Each must-have field has a ranked source order. Higher-ranked sources override lower-ranked ones. This avoids chaotic merging.</p></div>
+
+    <h3>Field-by-Field Mapping</h3>
+
+    <h4>project_family — Source Precedence</h4>
+    <p>1) Workbook item/general sheet → 2) BOM/item descriptions → 3) Specs/datasheets titles → 4) Drawing titles → 5) LLM from prose. Uses synonym dictionary. Conflict: two strong different families with no dominant → <code>unknown</code> + <code>ambiguous</code>.</p>
+
+    <h4>material_family — Grade-Pattern Inference</h4>
+    <p>SA-516, A516, CS → <code>carbon_steel</code>. SS304, 316L → <code>stainless_steel</code>. 2205, Duplex → <code>duplex</code>. Inconel, 625, 825 → <code>nickel_alloy</code>. Multiple families across major components → <code>mixed</code>.</p>
+
+    <h4>weight_profile</h4>
+    <p>Parse number + source unit → convert to kg → set basis. If only a range, do not fake a point value. If both per-item and total weight exist, canonical prefers total_project. <strong>Never estimate weight from dimensions in V1</strong> — that is engineering inference, not extraction.</p>
+
+    <h4>applicable_standards</h4>
+    <p>1) Folder 06 filenames (highest confidence) → 2) Exact mentions in specs/docs → 3) LLM from prose. Normalize variants (ASME Sec VIII Div.1 → ASME VIII Div 1). Deduplicate. If both broad and precise forms exist, keep precise and drop broad.</p>
+
+    <h3>Cross-Field Inference Rules</h3>
+    <table class="t">
+      <thead><tr><th>Rule</th><th>Direction</th><th>Safety</th></tr></thead>
+      <tbody>
+        <tr><td>material_family from material_grade_primary</td><td>Grade → family</td><td>Safe and useful</td></tr>
+        <tr><td>project_family from equipment_type</td><td>Equipment → family</td><td>Safe with dictionary guard</td></tr>
+        <tr><td>Process flags reinforce standards/compliance</td><td>Mutual reinforcement</td><td>Informational only, not overriding</td></tr>
+        <tr><td>Cost fields from intake technical data</td><td>BLOCKED</td><td><strong>Never in V1.</strong> No converting material + weight + PWHT into price-like facts.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Implementation Pattern</h3>
+    <div class="flow-row">
+      <div class="flow-box"><strong>Extractors</strong>Produce raw candidates per field</div>
+      <div class="flow-box"><strong>Field Mapper</strong>Resolves each field via precedence + dictionary</div>
+      <div class="flow-box"><strong>Conflict Resolver</strong>Marks unknown/ambiguous when needed</div>
+      <div class="flow-box"><strong>Profile Assembler</strong>Writes final normalized object</div>
+      <div class="flow-box"><strong>Evidence Writer</strong>Stores candidate trail</div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 8 — PROCESS FLAGS RESOLUTION -->
+  <!-- ============================================ -->
+  <section id="s8">
+    <div class="sh">
+      <div class="sh-n">Step 08 — End-to-End Resolution</div>
+      <h2>process_flags — Candidate Resolution</h2>
+      <p>One of the strongest shared comparison families. RT, PWHT, U-Stamp, and NB are explicitly named as major cost drivers and overlapping fields between ZIP and workbook.</p>
+    </div>
+
+    <h3>Candidate Object Shape</h3>
+    <div class="code-block">{
+  <span class="ck">"field"</span>: <span class="cs">"pwht_required"</span>,
+  <span class="ck">"candidate_value"</span>: <span class="cs">"yes"</span>,
+  <span class="ck">"source_kind"</span>: <span class="cs">"checklist | datasheet | spec_text | llm_text | workbook_cell"</span>,
+  <span class="ck">"source_ref"</span>: <span class="cs">"file/page/cell reference"</span>,
+  <span class="ck">"strength"</span>: <span class="cs">"high | medium | low"</span>
+}</div>
+
+    <h3>Strength Ranking</h3>
+    <table class="t">
+      <thead><tr><th>Strength</th><th>Sources</th></tr></thead>
+      <tbody>
+        <tr><td><strong>high</strong></td><td>Workbook fixed cell, structured checklist, explicit table field</td></tr>
+        <tr><td><strong>medium</strong></td><td>Exact sentence in structured doc/spec</td></tr>
+        <tr><td><strong>low</strong></td><td>LLM-derived interpretation from prose or indirect wording</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Resolution Policy (V1)</h3>
+    <p><strong>Phase 1:</strong> Normalize all raw expressions into canonical candidate values. <strong>Phase 2:</strong> Rank by source strength. <strong>Phase 3:</strong> One strongest candidate → choose it. Several strongest with same value → choose it. Several strongest with conflicting values → <code>ambiguous</code>. No usable candidate → <code>unknown</code>.</p>
+
+    <h3>Per-Flag Normalization</h3>
+    <table class="t">
+      <thead><tr><th>Flag</th><th>Mapping Examples</th><th>Critical Restraint</th></tr></thead>
+      <tbody>
+        <tr><td><code>rt_requirement</code></td><td>100% RT, Full RT → <code>full</code>; Spot RT, 10% RT → <code>spot</code>; No RT → <code>none</code>; Generic "radiography" without scope → <code>unknown</code></td><td>Do not map generic "radiography" to spot or full</td></tr>
+        <tr><td><code>pwht_required</code></td><td>PWHT required → <code>yes</code>; PWHT not required → <code>no</code></td><td>Do not infer from material alone in V1</td></tr>
+        <tr><td><code>u_stamp_required</code></td><td>U-Stamp required, Code stamp → <code>yes</code></td><td>Do not infer from ASME standard presence alone</td></tr>
+        <tr><td><code>nb_registration_required</code></td><td>NB registration required → <code>yes</code></td><td>Do not auto-set from U-Stamp; keep separate in V1</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 9 — STANDARDS RESOLUTION -->
+  <!-- ============================================ -->
+  <section id="s9">
+    <div class="sh">
+      <div class="sh-n">Step 09 — End-to-End Resolution</div>
+      <h2>applicable_standards — Candidate Resolution</h2>
+      <p>One of the cleanest V1 assets. Standards auto-detection from Folder 06 filenames is a low-complexity, cold-start-friendly capability.</p>
+    </div>
+
+    <h3>Standard Classification</h3>
+    <table class="t">
+      <thead><tr><th>Type</th><th>Examples</th><th>V1 Treatment</th></tr></thead>
+      <tbody>
+        <tr><td>Exact coded standards</td><td>SAMSS-010, SAES-A-004, SAEP-302</td><td>Best targets — filenames expose them deterministically</td></tr>
+        <tr><td>Named code families</td><td>ASME VIII Div 1, API 650, ASTM A240</td><td>From filenames, datasheets, specs, workbook notes</td></tr>
+        <tr><td>Broad references (too vague alone)</td><td>ASME, API, ASTM</td><td>Only stored if no precise variant exists</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Resolution Logic (Multi-Value)</h3>
+    <p><strong>Phase 1:</strong> Normalize all candidates into canonical code/display forms. <strong>Phase 2:</strong> Union across all sources. <strong>Phase 3:</strong> Collapse broad duplicates — if both ASME and ASME VIII Div 1 exist, keep precise, drop broad. <strong>Phase 4:</strong> Uncertain/truncated codes → do not inject into canonical list, store in field_evidence.</p>
+
+    <h3>What NOT to Do</h3>
+    <p>Do not parse full PDF standard contents in V1. Do not assume every Folder 06 file is equally applicable. Do not infer process flags from standards presence. Do not infer cost impact from standards alone. Standard detected ≠ PWHT=yes. Standard detected ≠ cost uplift=X.</p>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 10 — WORKBOOK CANONICAL MIRROR -->
+  <!-- ============================================ -->
+  <section id="s10">
+    <div class="sh">
+      <div class="sh-n">Step 10 — Workbook Side</div>
+      <h2>Workbook-Side Canonical Mirror</h2>
+      <p>The two extraction templates are designed to meet. The workbook mirror uses the exact same field names, enums, and normalization rules as intake on overlapping fields.</p>
+    </div>
+
+    <div class="core-stmt">
+      <div class="lbl">Design Principle</div>
+      <div class="txt">Mirror, not clone.</div>
+      <div class="sub"><code>rfq_intake_profile.canonical_project_profile</code> = "what the RFQ seems to ask for."<br><code>workbook_profile.canonical_estimate_profile</code> = "what the workbook explicitly represents for the estimate." Same field contract on overlapping fields. Different business meaning.</div>
+    </div>
+
+    <h3>canonical_estimate_profile — V1 Fields</h3>
+    <div class="code-block">{
+  <span class="ck">"canonical_estimate_profile"</span>: {
+    <span class="ck">"project_family"</span>:            <span class="cs">"pressure_vessel"</span>,       <span class="cc">// Same enum as intake</span>
+    <span class="ck">"project_subtype"</span>:           <span class="cs">"horizontal_vessel"</span>,     <span class="cc">// General sheet vessel type H/V</span>
+    <span class="ck">"equipment_type"</span>:            <span class="cs">"horizontal_separator"</span>,  <span class="cc">// Same alias dictionary</span>
+    <span class="ck">"quantity"</span>:                   { <span class="ck">"value"</span>: <span class="cv">2</span>, <span class="ck">"unit"</span>: <span class="cs">"item"</span>, <span class="ck">"basis"</span>: <span class="cs">"total_project"</span> },
+    <span class="ck">"material_family"</span>:            <span class="cs">"carbon_steel"</span>,
+    <span class="ck">"material_grade_primary"</span>:     <span class="cs">"SA-516 Gr 70"</span>,
+    <span class="ck">"material_grade_secondary"</span>:   [],
+    <span class="ck">"dimension_profile"</span>:          { <span class="ck">"diameter_mm"</span>: <span class="cv">1500</span>, <span class="ck">"length_mm"</span>: <span class="cv">6000</span> },
+    <span class="ck">"weight_profile"</span>:             { <span class="ck">"value_kg"</span>: <span class="cv">12500</span>, <span class="ck">"basis"</span>: <span class="cs">"total_project"</span>, <span class="ck">"state"</span>: <span class="cs">"known"</span> },
+    <span class="ck">"applicable_standards"</span>:       [<span class="cs">"ASME VIII Div 1"</span>],   <span class="cc">// Only if explicit workbook evidence</span>
+    <span class="ck">"process_flags"</span>:              { <span class="ck">"rt_requirement"</span>: <span class="cs">"spot"</span>, <span class="ck">"pwht_required"</span>: <span class="cs">"yes"</span>, <span class="ck">"u_stamp_required"</span>: <span class="cs">"yes"</span> },
+    <span class="ck">"timeline_profile"</span>:           { <span class="ck">"delivery_duration_value"</span>: <span class="cv">180</span>, <span class="ck">"delivery_duration_unit"</span>: <span class="cs">"day"</span> }
+  }
+}</div>
+
+    <h3>What Stays Outside the Mirror</h3>
+    <p>Cost breakdown, cost-per-ton, gross margin, payment structure, bank charges, manhour breakdown — all belong in workbook-native sections. The mirror is for intake↔workbook comparison on common business language. Workbook-native sections are for estimation intelligence. <code>cost_per_ton</code> stays in the workbook cost block, not in the mirror, because intake has no trustworthy counterpart in cold start.</p>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 11 — WORKBOOK PROFILE -->
+  <!-- ============================================ -->
+  <section id="s11">
+    <div class="sh">
+      <div class="sh-n">Step 11 — Workbook Profile</div>
+      <h2>workbook_profile — Full Top-Level Schema</h2>
+      <p>The workbook as a first-class parsed object. Two layers: shared comparison layer and workbook-native intelligence layer.</p>
+    </div>
+
+    <h3>8 Top-Level Blocks</h3>
+    <table class="t">
+      <thead><tr><th>Block</th><th>Role</th><th>Layer</th></tr></thead>
+      <tbody>
+        <tr><td><code>artifact_meta</code></td><td>Artifact envelope: id, rfq_id, type, status, version, timestamps, schema_version</td><td>Meta</td></tr>
+        <tr><td><code>source_workbook</code></td><td>File reference, filename, revision, sheet count, parse timestamp, checksum, parser version</td><td>Meta</td></tr>
+        <tr><td><code>workbook_structure</code></td><td>Expected sheets found/missing, template version, key sheet availability, structural completeness checks, parse coverage</td><td>Meta</td></tr>
+        <tr><td><code>canonical_estimate_profile</code></td><td>Shared mirror block — same fields/enums as intake canonical profile on overlapping dimensions</td><td>Shared</td></tr>
+        <tr><td><code>cost_breakdown_profile</code></td><td>Normalized cost model: currency context, headline totals, cost lines, cost shares, unit economics, supporting drivers</td><td>Native</td></tr>
+        <tr><td><code>financial_profile</code></td><td>Revenue, gross margin, payment structure, bank charges, LC, guarantees, negative cash flow</td><td>Native</td></tr>
+        <tr><td><code>schedule_profile</code></td><td>Delivery duration, phase breakdown, phase durations (weeks), milestones</td><td>Native</td></tr>
+        <tr><td><code>quality_and_gaps</code></td><td>Missing sheets, missing fields, inconsistent totals, parse failures, comparison-ready flags</td><td>Meta</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 12 — COST BREAKDOWN PROFILE -->
+  <!-- ============================================ -->
+  <section id="s12">
+    <div class="sh">
+      <div class="sh-n">Step 12 — Cost Intelligence</div>
+      <h2>cost_breakdown_profile — Field-by-Field Schema</h2>
+      <p>The most important workbook-native block. Represents estimate cost structure — not revenue/margin strategy, not payment risk, not schedule.</p>
+    </div>
+
+    <h3>7 Sub-Blocks</h3>
+
+    <h4>1) currency_context</h4>
+    <p>Base currency: SAR. Secondary: USD. Exchange rate if extractable. All canonical totals stored in SAR; USD as optional mirror.</p>
+
+    <h4>2) headline_totals</h4>
+    <p><code>total_estimated_cost_sar</code>, <code>total_estimated_cost_usd</code>, <code>total_cost_per_ton_sar</code>, <code>total_cost_per_ton_usd</code>, <code>total_weight_kg_reference</code>, <code>cost_basis_state</code>. No margin or revenue — those belong in financial_profile.</p>
+
+    <h4>3) cost_lines — V1 Line Codes</h4>
+    <div class="enum-row">
+      <span class="enum-tag">material</span><span class="enum-tag">labour</span><span class="enum-tag">design</span><span class="enum-tag">consumables</span><span class="enum-tag">ndt</span><span class="enum-tag">pwht</span><span class="enum-tag">paint</span><span class="enum-tag">u_stamp</span><span class="enum-tag">nb</span><span class="enum-tag">transport</span><span class="enum-tag">financial_charges</span><span class="enum-tag">overheads</span><span class="enum-tag">contingency</span><span class="enum-tag">subcontracting</span><span class="enum-tag">other</span>
+    </div>
+    <p>Each line: <code>line_code</code>, <code>label</code>, <code>amount_sar</code>, <code>amount_usd</code>, <code>share_pct</code>, <code>cost_per_ton_sar</code>, <code>cost_per_ton_usd</code>, <code>source_sheet</code>, <code>state</code>.</p>
+
+    <h4>4) cost_shares</h4>
+    <p>Compact summary: material_pct, labour_pct, design_pct, ndt_pct, pwht_pct, paint_pct, financial_pct, overheads_pct, contingency_pct, other_pct. Pre-computed for fast comparison — avoids re-aggregating the line array.</p>
+
+    <h4>5) unit_economics</h4>
+    <p><code>cost_per_ton_sar</code>, <code>cost_per_ton_usd</code>, <code>material_cost_per_kg_sar</code>, <code>material_cost_per_kg_usd</code>, <code>derived_from_weight_kg</code>. These stay workbook-native, not promoted into the shared mirror.</p>
+
+    <h4>6) supporting_cost_drivers</h4>
+    <p>Bridge block: rt_requirement, pwht_required, u_stamp_required, nb_registration_required, item_count, total_weight_kg, material_family, material_grade_primary. Values always copied from canonical_estimate_profile — never independently extracted.</p>
+
+    <h4>7) quality_and_gaps</h4>
+    <p>missing_expected_cost_lines, zero_value_suspicious_lines, inconsistent_total_vs_line_sum, missing_cost_per_ton, missing_weight_reference, sheet_parse_warnings.</p>
+
+    <h3>Key Design Decisions</h3>
+    <div class="decision">
+      <strong>Labour:</strong> Headline cost line in V1. Optionally split into direct_labour/indirect_labour if extraction is stable.<br><br>
+      <strong>Financial charges:</strong> Headline cost line in cost_breakdown_profile + detailed decomposition (LC, bank guarantee, performance bond, advance payment, negative cash flow) in financial_profile. Avoids duplication while preserving both views.
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 13 — WORKBOOK REVIEW REPORT -->
+  <!-- ============================================ -->
+  <section id="s13">
+    <div class="sh">
+      <div class="sh-n">Step 13 — Bridge Artifact</div>
+      <h2>workbook_review_report — The Three Families</h2>
+      <p>The first real bridge between intake intelligence and workbook intelligence. Review-oriented, not parser or decision artifact. Phrased as "this deserves review," never "the workbook is wrong."</p>
+    </div>
+
+    <h3>7 Top-Level Blocks</h3>
+    <p><code>artifact_meta</code> → <code>review_scope</code> → <code>executive_summary</code> → <code>family_1_structural_completeness</code> → <code>family_2_benchmark_outlier</code> → <code>family_3_briefing_vs_actual</code> → <code>review_recommendations</code></p>
+
+    <h3>The Universal Finding Object</h3>
+    <div class="code-block">{
+  <span class="ck">"finding_id"</span>:              <span class="cs">"string"</span>,
+  <span class="ck">"family"</span>:                  <span class="cs">"structural_completeness | benchmark_outlier | briefing_vs_actual"</span>,
+  <span class="ck">"finding_code"</span>:            <span class="cs">"missing_cost_line.pwht | requirement_gap.u_stamp_cost_signal_missing"</span>,
+  <span class="ck">"title"</span>:                   <span class="cs">"string"</span>,
+  <span class="ck">"severity"</span>:                <span class="cs">"low | medium | high"</span>,
+  <span class="ck">"status"</span>:                  <span class="cs">"open | acknowledged | dismissed"</span>,
+  <span class="ck">"review_posture"</span>:          <span class="cs">"this_deserves_review"</span>,
+  <span class="ck">"reason_plain_language"</span>:   <span class="cs">"string"</span>,
+  <span class="ck">"compared_objects"</span>: {
+    <span class="ck">"workbook_field"</span>:         <span class="cs">"string | null"</span>,
+    <span class="ck">"briefing_field"</span>:         <span class="cs">"string | null"</span>,
+    <span class="ck">"historical_metric"</span>:      <span class="cs">"string | null"</span>
+  },
+  <span class="ck">"observed_value"</span>:          <span class="cs">"any"</span>,
+  <span class="ck">"expected_or_reference"</span>:   <span class="cs">"any"</span>,
+  <span class="ck">"confidence"</span>:              <span class="cs">"high | medium | low | unavailable"</span>,
+  <span class="ck">"reference_set_summary"</span>: {
+    <span class="ck">"available"</span>:              <span class="cv">true</span>,
+    <span class="ck">"project_count"</span>:          <span class="cv">0</span>,
+    <span class="ck">"reference_logic"</span>:        <span class="cs">"string | null"</span>
+  },
+  <span class="ck">"evidence_refs"</span>:           [<span class="cs">"string"</span>],
+  <span class="ck">"created_at"</span>:              <span class="cs">"timestamp"</span>
+}</div>
+
+    <h3>Family Activation in Cold Start</h3>
+    <div class="card-grid cols-3">
+      <div class="card" style="border-top: 3px solid var(--green);">
+        <div class="card-lbl lbl-green">Family 1 — Structural/Completeness</div>
+        <h4>Fully Active</h4>
+        <p>Missing sheets, missing cost lines, line-total mismatch, broken percentage distribution, missing weight reference, template mismatch. The safest and most detailed V1 section. Also exposes structural_score and parse/comparison blockers.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--ink-5);">
+        <div class="card-lbl" style="color: var(--ink-5);">Family 2 — Benchmark/Outlier</div>
+        <h4>Schema-Ready, Dormant</h4>
+        <p><code>status: "unavailable"</code>, <code>activation_reason: "insufficient_historical_base"</code>. Cost-per-ton, share, margin, schedule comparisons require historical peers. The honest V1 position.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--amber);">
+        <div class="card-lbl lbl-amber">Family 3 — Briefing vs Actual</div>
+        <h4>Selectively Active</h4>
+        <p><strong>Shared field deviation:</strong> intake says carbon_steel, workbook says stainless_steel. <strong>Requirement coverage gap:</strong> intake flags PWHT=yes, no PWHT cost line in workbook. <strong>Cost envelope gap:</strong> inactive in cold start unless briefing supports it. This family is the strongest V1 demonstration output.</p>
+      </div>
+    </div>
+
+    <div class="callout callout-amber">
+      <strong>Critical rule:</strong> Family separation must be preserved visibly in the report. Do not flatten structural facts and benchmark facts into one priority list — they have different trustworthiness levels. Users must see which family each finding comes from.
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 14 — INTELLIGENCE BRIEFING -->
+  <!-- ============================================ -->
+  <section id="s14">
+    <div class="sh">
+      <div class="sh-n">Step 14 — Briefing Design</div>
+      <h2>intelligence_briefing — Cold-Start Design</h2>
+      <p>The flagship proactive dossier. First-class artifact even if some sections are unavailable. V1 positions it as a proactive technical/compliance dossier for feasibility review, not yet a full historical commercial intelligence engine.</p>
+    </div>
+
+    <h3>8 Top-Level Blocks</h3>
+    <p><code>artifact_meta</code> → <code>briefing_scope</code> → <code>executive_summary</code> → <code>section_a_document_understanding</code> → <code>section_b_similarity_context</code> → <code>section_c_preliminary_cost_envelope</code> → <code>section_d_client_compliance_supplier_signals</code> → <code>quality_and_gaps</code></p>
+
+    <h3>Section Activation Matrix</h3>
+    <table class="t">
+      <thead><tr><th>Section</th><th>V1 Status</th><th>Content</th></tr></thead>
+      <tbody>
+        <tr><td><code>executive_summary</code></td><td style="color: var(--green); font-weight: 600;">Fully Active</td><td>One-paragraph summary, technical highlights, risk highlights, unknowns, confidence band, review posture</td></tr>
+        <tr><td><code>section_a_document_understanding</code></td><td style="color: var(--green); font-weight: 600;">Fully Active</td><td>Canonical profile summary, document family map, scope summary, technical requirements, QA/QC, mandated vendors. Backbone of cold-start briefing.</td></tr>
+        <tr><td><code>section_b_similarity_context</code></td><td style="color: var(--ink-5); font-weight: 600;">Unavailable</td><td><code>status: "unavailable"</code>, <code>reason: "insufficient_historical_base"</code>. Optionally shows future_similarity_basis fields.</td></tr>
+        <tr><td><code>section_c_preliminary_cost_envelope</code></td><td style="color: var(--ink-5); font-weight: 600;">Unavailable</td><td>Inactive by default. Only activated with extreme caution if expert-seeded heuristic exists, labeled exploratory and low-confidence.</td></tr>
+        <tr><td><code>section_d</code> — compliance/supplier</td><td style="color: var(--amber); font-weight: 600;">Partially Active</td><td>Active: compliance_risk_flags, supplier_constraint_flags. Unavailable: client_context (no history), supplier performance history.</td></tr>
+        <tr><td><code>quality_and_gaps</code></td><td style="color: var(--green); font-weight: 600;">Fully Active</td><td>Missing inputs, ambiguous extractions, low-confidence sections, suppressed sections, recommended human checks.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Dual Format Rule</h3>
+    <div class="decision">
+      <strong>Every section has both:</strong> a <code>summary_text</code> (for managers and chatbot) and structured fields underneath (for machines and stable UI). The briefing must be queryable by multiple consumers — UI panels, chatbot, and dashboards. Pure prose is hard to reuse; pure JSON is weak for human review.
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 15 — SNAPSHOT -->
+  <!-- ============================================ -->
+  <section id="s15">
+    <div class="sh">
+      <div class="sh-n">Step 15 — Consumer Read Model</div>
+      <h2>rfq_intelligence_snapshot — The Consumer Facade</h2>
+      <p>Read-optimized per-RFQ projection. Answers "what does the system currently know about this RFQ?" without consumers needing to understand internal artifacts. CQRS-like: manager handles commands, intelligence builds analytical read models.</p>
+    </div>
+
+    <h3>8 Top-Level Blocks</h3>
+    <table class="t">
+      <thead><tr><th>Block</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>snapshot_meta</code></td><td>rfq_id, version, generated_at, schema_version, cold_start_mode, overall_status (intake_processing → briefing_ready → workbook_processing → review_ready → partial → failed)</td></tr>
+        <tr><td><code>artifact_refs</code></td><td>Latest version + status of each underlying artifact. Keeps snapshot traceable.</td></tr>
+        <tr><td><code>availability_matrix</code></td><td>Per-section status: available, partial, unavailable, stale, suppressed_due_to_cold_start. The single most useful block for consumers.</td></tr>
+        <tr><td><code>executive_panel</code></td><td>Headline summary, project identity, current key flags, review posture, highest priority points, confidence band.</td></tr>
+        <tr><td><code>briefing_panel</code></td><td>Compressed briefing view: document understanding summary, compliance/risk, supplier constraints, similarity/envelope status.</td></tr>
+        <tr><td><code>workbook_panel</code></td><td>Workbook uploaded? Parse status, cost summary headlines, key process flags, timeline.</td></tr>
+        <tr><td><code>review_panel</code></td><td>Review status, finding counts by family, top open findings, benchmark status, recommended checks. Preserves family distinctions.</td></tr>
+        <tr><td><code>consumer_hints</code></td><td>ui_recommended_tabs, chatbot_suggested_questions, manager_attention_points, estimator_attention_points. Pre-computed navigation for thin consumers.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-blue">
+      <strong>Consumer-neutral at core:</strong> The snapshot is not chatbot-specific. The architecture explicitly serves UI screens, chatbot, BI/dashboard, and intelligence's own enrichment loop. The snapshot serves all of them, with small consumer hints on top.
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- STEP 16 — INTEGRATION -->
+  <!-- ============================================ -->
+  <section id="s16">
+    <div class="sh">
+      <div class="sh-n">Step 16 — Integration &amp; API</div>
+      <h2>Integration Flow, Events, API &amp; Persistence</h2>
+      <p>The step that turns the artifact model into an actual microservice boundary. Event-driven ingestion, synchronous read API, own database, clean ownership boundaries.</p>
+    </div>
+
+    <h3>Ownership Boundary</h3>
+    <div class="card-grid cols-3">
+      <div class="card" style="border-top: 3px solid var(--blue);">
+        <div class="card-lbl lbl-blue">rfq_manager_ms</div>
+        <p>RFQ lifecycle state, workflow/stages, file upload/storage, outcome capture, operational truth.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--amber);">
+        <div class="card-lbl lbl-amber">rfq_intelligence_ms</div>
+        <p>Parsing triggered by events, intelligence artifacts, analytical projections, historical enrichment, read APIs.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--cyan);">
+        <div class="card-lbl lbl-cyan">rfq_chatbot_ms</div>
+        <p>Conversation UX only. Routes to manager or intelligence APIs. Produces no intelligence.</p>
+      </div>
+    </div>
+
+    <h3>V1 Event Triggers</h3>
+    <table class="t">
+      <thead><tr><th>Event</th><th>Source</th><th>Intelligence Reaction</th></tr></thead>
+      <tbody>
+        <tr><td><code>rfq.created</code></td><td>Manager</td><td>Fetch metadata → build rfq_intake_profile → build intelligence_briefing → create rfq_analytical_record stub from intake features → update snapshot</td></tr>
+        <tr><td><code>workbook.uploaded</code></td><td>Manager</td><td>Fetch workbook ref → build workbook_profile → build workbook_review_report → enrich rfq_analytical_record with workbook features → update snapshot</td></tr>
+        <tr><td><code>outcome.recorded</code></td><td>Manager</td><td>Read outcome → enrich rfq_analytical_record with result/outcome fields → refresh snapshot if needed</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-amber">
+      <strong>Only 3 events in V1.</strong> Do not introduce a large event catalog yet. These 3 cover the complete intelligence lifecycle. Each event triggers a sequential build chain within the same handler — not separate events triggering each other (avoids cascades and race conditions).
+    </div>
+
+    <h3>Processing Flows</h3>
+    <div class="flow-row">
+      <div class="flow-box" style="border-top: 2px solid var(--green);"><strong>rfq.created</strong>intake_profile → briefing → analytical_record stub → snapshot</div>
+      <div class="flow-box" style="border-top: 2px solid var(--blue);"><strong>workbook.uploaded</strong>workbook_profile → review_report → analytical_record enrichment → snapshot</div>
+      <div class="flow-box" style="border-top: 2px solid var(--purple);"><strong>outcome.recorded</strong>analytical_record enrichment → snapshot refresh</div>
+    </div>
+
+    <h3>V1 API Surface — 7 Endpoints</h3>
+    <table class="t">
+      <thead><tr><th>#</th><th>Endpoint</th><th>Purpose</th><th>Consumer</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>GET /rfqs/{rfq_id}/snapshot</code></td><td>Main entry point — returns rfq_intelligence_snapshot</td><td>UI, Chatbot</td></tr>
+        <tr><td>2</td><td><code>GET /rfqs/{rfq_id}/briefing</code></td><td>Returns latest intelligence_briefing</td><td>UI, Chatbot</td></tr>
+        <tr><td>3</td><td><code>GET /rfqs/{rfq_id}/workbook-profile</code></td><td>Returns latest workbook_profile</td><td>UI</td></tr>
+        <tr><td>4</td><td><code>GET /rfqs/{rfq_id}/workbook-review</code></td><td>Returns latest workbook_review_report</td><td>UI, Chatbot</td></tr>
+        <tr><td>5</td><td><code>POST /rfqs/{rfq_id}/reprocess/intake</code></td><td>Manual re-run of intake parsing</td><td>Admin</td></tr>
+        <tr><td>6</td><td><code>POST /rfqs/{rfq_id}/reprocess/workbook</code></td><td>Manual re-run of workbook parsing</td><td>Admin</td></tr>
+        <tr><td>7</td><td><code>GET /rfqs/{rfq_id}/artifacts</code></td><td>Artifact index with versions/statuses</td><td>Admin</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Persistence Strategy</h3>
+    <div class="decision">
+      <strong>Own database:</strong> Intelligence has its own analytical PostgreSQL database, separate from manager's operational DB.<br><br>
+      <strong>Artifact versioning:</strong> Append-version artifacts (immutable, traceable) + replace-current snapshot (latest assembled view). When a new version is created, the old version's <code>is_current</code> flips to <code>false</code> atomically in one transaction.<br><br>
+      <strong>Common metadata per artifact:</strong> artifact_id, rfq_id, artifact_type, version, status, created_at, source_event_type, source_event_id, is_current.<br><br>
+      <strong>Snapshot:</strong> One current snapshot per RFQ, regenerated whenever upstream intelligence changes.<br><br>
+      <strong>Historical store:</strong> rfq_analytical_record grows organically — no retraining needed. Seed for future similarity and benchmarking.
+    </div>
+
+    <h3>Reprocessing Cascade Rules</h3>
+    <table class="t">
+      <thead><tr><th>Trigger</th><th>Rebuilds</th></tr></thead>
+      <tbody>
+        <tr><td>Source package references changed</td><td>intake_profile → briefing → analytical_record (re-stub) → snapshot</td></tr>
+        <tr><td>New workbook version uploaded</td><td>workbook_profile → review_report → analytical_record (enrich) → snapshot</td></tr>
+        <tr><td>Intake profile version changes</td><td>briefing → snapshot</td></tr>
+        <tr><td>Workbook profile or briefing changes</td><td>review_report → snapshot</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size: 13px; color: var(--ink-4);">All cascades run as sequential steps within the same event handler — never as separate events triggering each other.</p>
+
+    <h3>What Intelligence Reads from Manager</h3>
+    <p>Only: RFQ id/metadata, file references, workbook reference, minimal operational context for display. Intelligence should not become dependent on manager's internal operational schema. Build once on event, read many times afterward — that is the right pattern.</p>
+
+    <h3>Failure &amp; Partial-Completion Model</h3>
+    <p>Both artifact-level and snapshot-level support: <code>pending</code>, <code>partial</code>, <code>complete</code>, <code>failed</code>. One failed section should not hide the whole RFQ intelligence state. The UI renders progressively as sections complete.</p>
+
+    <div class="core-stmt">
+      <div class="lbl">Complete V1 Flow Summary</div>
+      <div class="txt">Events → Artifacts → Snapshot → Consumers</div>
+      <div class="sub">Manager publishes lifecycle facts. Intelligence reacts asynchronously and builds versioned analytical artifacts plus a current per-RFQ snapshot. UI and chatbot read that snapshot and underlying artifacts via synchronous request-response APIs. Intelligence never writes to the operational database. The chatbot stays thin. Each service owns its own database.</div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- FOOTER -->
+  <!-- ============================================ -->
+  <div class="doc-footer">
+    <p>rfq_intelligence_ms — Complete Architecture Blueprint v1.1 · RFQMGMT Platform · BACAB Consulting × GHI / Albassam Group<br>
+    16 Design Steps · 6 Artifacts · March 2026</p>
+  </div>
+
+</div><!-- end .page -->
+
+</body>
+</html>
