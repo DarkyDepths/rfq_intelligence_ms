@@ -91,6 +91,7 @@ def create_app() -> FastAPI:
     # ── Route Registration ────────────────────────────
     from src.routes.health_routes import router as health_router
     from src.routes.intelligence_routes import router as intelligence_router
+    from src.routes.batch_seed_run_routes import router as batch_seed_run_router
     from src.routes.workbook_parser_routes import router as workbook_parser_router
 
     # Health is at root level (no prefix)
@@ -99,6 +100,7 @@ def create_app() -> FastAPI:
     # All intelligence endpoints under /intelligence/v1
     v1 = APIRouter(prefix="/intelligence/v1")
     v1.include_router(intelligence_router)
+    v1.include_router(batch_seed_run_router)
     v1.include_router(workbook_parser_router)
     app.include_router(v1)
 

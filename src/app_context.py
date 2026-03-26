@@ -30,6 +30,7 @@ from src.config.settings import settings
 
 # ── Datasources ───────────────────────────────────────
 from src.datasources.artifact_datasource import ArtifactDatasource
+from src.datasources.batch_seed_run_datasource import BatchSeedRunDatasource
 from src.datasources.processed_event_datasource import ProcessedEventDatasource
 
 # ── Connectors ────────────────────────────────────────
@@ -40,11 +41,13 @@ from src.translators.artifact_translator import ArtifactTranslator
 
 # ── Controllers ───────────────────────────────────────
 from src.controllers.intelligence_controller import IntelligenceController
+from src.controllers.batch_seed_run_controller import BatchSeedRunController
 from src.controllers.reprocess_controller import ReprocessController
 from src.controllers.workbook_parse_controller import WorkbookParseController
 
 # ── Services ──────────────────────────────────────────
 from src.services.artifact_read_service import ArtifactReadService
+from src.services.batch_seed_run_read_service import BatchSeedRunReadService
 from src.services.intake_service import IntakeService
 from src.services.workbook_service import WorkbookService
 from src.services.briefing_service import BriefingService
@@ -66,6 +69,10 @@ def get_artifact_datasource(db: Session = Depends(get_db)) -> ArtifactDatasource
 
 def get_processed_event_datasource(db: Session = Depends(get_db)) -> ProcessedEventDatasource:
     return ProcessedEventDatasource(db)
+
+
+def get_batch_seed_run_datasource(db: Session = Depends(get_db)) -> BatchSeedRunDatasource:
+    return BatchSeedRunDatasource(db)
 
 
 # ═══════════════════════════════════════════════════════
@@ -93,6 +100,12 @@ def get_artifact_read_service(
     translator: ArtifactTranslator = Depends(get_artifact_translator),
 ) -> ArtifactReadService:
     return ArtifactReadService(datasource=datasource, translator=translator)
+
+
+def get_batch_seed_run_read_service(
+    datasource: BatchSeedRunDatasource = Depends(get_batch_seed_run_datasource),
+) -> BatchSeedRunReadService:
+    return BatchSeedRunReadService(datasource=datasource)
 
 
 def get_intake_service(
@@ -177,6 +190,12 @@ def get_reprocess_controller(
         intake_service=intake_service,
         workbook_service=workbook_service,
     )
+
+
+def get_batch_seed_run_controller(
+    read_service: BatchSeedRunReadService = Depends(get_batch_seed_run_read_service),
+) -> BatchSeedRunController:
+    return BatchSeedRunController(read_service=read_service)
 
 
 def get_workbook_parser_orchestrator() -> WorkbookParserOrchestrator:
