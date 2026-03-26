@@ -20,6 +20,15 @@ def _line_by_canonical(lines: object, canonical_key: str) -> object:
     return None
 
 
+def _deep_get(obj: object, *keys: str) -> object:
+    current = obj
+    for key in keys:
+        current = _value(current, key)
+        if current is None:
+            return None
+    return current
+
+
 def _relative_delta(left_value: float, right_value: float, delta_abs: float) -> float | None:
     denominator = abs(right_value)
     if denominator == 0:
@@ -223,10 +232,94 @@ def run_numeric_cross_checks(
     ]
 
 
+def run_cash_flow_cross_checks(
+    cash_flow_identity: object,
+    general_identity: object,
+    cash_flow_summary: object,
+    bid_s_summary: object,
+    top_sheet_summary: object,
+) -> list[CrossCheck]:
+    checks = []
+    for field_name in ["inquiry_no", "client_name", "project_name"]:
+        checks.append(
+            _exact_check(
+                code=f"CASH_FLOW_vs_GENERAL_{field_name.upper()}",
+                left_field_path=f"cost_breakdown_profile.financial_profile.identity_mirror.{field_name}",
+                right_field_path=f"workbook_profile.rfq_identity.{field_name}",
+                left_value=_value(cash_flow_identity, field_name),
+                right_value=_value(general_identity, field_name),
+            )
+        )
+
+    checks.append(
+        _numeric_check(
+            code="CASH_FLOW_INFLOW_vs_BID_S_GRAND_TOTAL",
+            left_field_path="cost_breakdown_profile.financial_profile.cash_flow_summary.total_inflow_sr",
+            right_field_path="cost_breakdown_profile.bid_summary.grand_total.amount_sar",
+            left_value=_value(cash_flow_summary, "total_inflow_sr"),
+            right_value=_value(_value(bid_s_summary, "grand_total"), "amount_sar"),
+            tolerance_abs=0.01,
+        )
+    )
+    checks.append(
+        _numeric_check(
+            code="CASH_FLOW_INFLOW_vs_TOP_SHEET_REVENUE",
+            left_field_path="cost_breakdown_profile.financial_profile.cash_flow_summary.total_inflow_sr",
+            right_field_path="cost_breakdown_profile.top_sheet_summary.total_revenue.rev00_value",
+            left_value=_value(cash_flow_summary, "total_inflow_sr"),
+            right_value=_value(_value(top_sheet_summary, "total_revenue"), "rev00_value"),
+            tolerance_abs=10.0,
+            informational_only=True,
+        )
+    )
+    return checks
+
+
+def run_mat_breakup_cross_checks(
+    mat_summary_total: object,
+    bid_s_material_line: object,
+    bid_s_meta: object,
+    mat_items: object,
+) -> list[CrossCheck]:
+    item_cost_sum = 0.0
+    if isinstance(mat_items, list):
+        for item in mat_items:
+            item_cost_sum += float(_value(_value(item, "grand_total"), "cost_total_sr") or 0.0)
+
+    return [
+        _numeric_check(
+            code="MAT_BREAKUP_TOTAL_vs_BID_S_MATERIAL",
+            left_field_path="cost_breakdown_profile.material_decomposition.summary.grand_total.cost_total_sr",
+            right_field_path="cost_breakdown_profile.bid_summary_lines[material].amount_sar",
+            left_value=_value(mat_summary_total, "cost_total_sr"),
+            right_value=_value(bid_s_material_line, "amount_sar"),
+            tolerance_abs=0.01,
+        ),
+        _numeric_check(
+            code="MAT_BREAKUP_FINISH_WT_vs_BID_S_WEIGHT",
+            left_field_path="cost_breakdown_profile.material_decomposition.summary.grand_total.weight_finish_ton",
+            right_field_path="workbook_profile.bid_meta.total_weight_ton",
+            left_value=_value(mat_summary_total, "weight_finish_ton"),
+            right_value=_value(bid_s_meta, "total_weight_ton"),
+            tolerance_abs=0.01,
+        ),
+        _numeric_check(
+            code="MAT_BREAKUP_ITEM_SUM_vs_SUMMARY",
+            left_field_path="sum(material_decomposition.items[*].grand_total.cost_total_sr)",
+            right_field_path="cost_breakdown_profile.material_decomposition.summary.grand_total.cost_total_sr",
+            left_value=item_cost_sum,
+            right_value=_value(mat_summary_total, "cost_total_sr"),
+            tolerance_abs=0.01,
+        ),
+    ]
+
+
 def run_cross_checks(
     general_data: dict,
     bid_s_data: dict,
     top_sheet_data: dict,
+    cash_flow_data: dict | None = None,
+    mat_breakup_data: dict | None = None,
 ) -> list[CrossCheck]:
     checks = []
     checks.extend(
@@ -246,4 +339,26 @@ def run_cross_checks(
             cost_breakdown_profile={"bid_s": bid_s_data, "top_sheet": top_sheet_data},
         )
     )
+
+    if cash_flow_data:
+        checks.extend(
+            run_cash_flow_cross_checks(
+                cash_flow_identity=cash_flow_data.get("identity_mirror", {}),
+                general_identity=general_data.get("rfq_identity", {}),
+                cash_flow_summary=cash_flow_data.get("cash_flow_summary", {}),
+                bid_s_summary=bid_s_data.get("bid_summary", {}),
+                top_sheet_summary=top_sheet_data.get("top_sheet_summary", {}),
+            )
+        )
+
+    if mat_breakup_data:
+        checks.extend(
+            run_mat_breakup_cross_checks(
+                mat_summary_total=_deep_get(mat_breakup_data, "material_decomposition", "summary", "grand_total"),
+                bid_s_material_line=_line_by_canonical(bid_s_data.get("bid_summary_lines"), "material"),
+                bid_s_meta=bid_s_data.get("bid_meta", {}),
+                mat_items=_deep_get(mat_breakup_data, "material_decomposition", "items") or [],
+            )
+        )
+
     return checks
