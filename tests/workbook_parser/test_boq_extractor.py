@@ -151,6 +151,25 @@ def test_boq_extractor_handles_formula_error_like_grand_total_cells_without_cras
     assert item.grand_total_vs_computed_match is False
 
 
+def test_boq_extractor_population_is_not_dependent_on_grand_total_row():
+    reader = OverrideReader(
+        base=_build_reader(),
+        numeric_overrides={
+            ("B-O-Q", 139, 13): 0.0,
+            ("B-O-Q", 139, 15): 0.0,
+            ("B-O-Q", 139, 17): 0.0,
+        },
+    )
+
+    result = BoqExtractor(reader).extract()
+
+    assert len(result.boq_item_details) == 1
+    item = result.boq_item_details[0]
+    assert item.tag_number == "K18-D-0003"
+    assert item.computed_total.total_amount_sr == pytest.approx(202293.23814702753)
+    assert item.computed_total.total_amount_sr > 0
+
+
 def test_boq_extractor_reports_optional_anchor_mismatch_as_warning():
     reader = OverrideReader(
         base=_build_reader(),
