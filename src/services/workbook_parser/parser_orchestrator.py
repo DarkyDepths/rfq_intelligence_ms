@@ -63,6 +63,8 @@ class WorkbookParserOrchestrator:
             },
             cash_flow_data=_pack2_data(cash_flow_result),
             mat_breakup_data=_pack2_data(mat_breakup_result),
+            boq_data=_pack2_data(boq_result),
+            general_item_rows=general_result.general_item_rows,
         )
 
         return build_envelope(
