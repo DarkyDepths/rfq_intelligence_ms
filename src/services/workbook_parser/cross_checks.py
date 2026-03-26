@@ -314,12 +314,51 @@ def run_mat_breakup_cross_checks(
     ]
 
 
+def run_boq_cross_checks(boq_item_details: object, general_item_rows: object) -> list[CrossCheck]:
+    checks: list[CrossCheck] = []
+    if not isinstance(boq_item_details, list) or not isinstance(general_item_rows, list):
+        return checks
+
+    for boq_item in boq_item_details:
+        item_index = _value(boq_item, "item_block_index")
+        computed_total = _value(boq_item, "computed_total")
+        boq_weight_kg = float(_value(computed_total, "procured_weight_kg") or 0.0)
+
+        if item_index is None or boq_weight_kg == 0:
+            continue
+        if not isinstance(item_index, int) or item_index <= 0:
+            continue
+        if item_index > len(general_item_rows):
+            continue
+
+        general_item = general_item_rows[item_index - 1]
+        general_weight_ton = _value(general_item, "total_weight_ton")
+        if general_weight_ton is None or float(general_weight_ton) <= 0:
+            continue
+
+        checks.append(
+            _numeric_check(
+                code=f"BOQ_ITEM_{item_index}_WEIGHT_vs_GENERAL",
+                left_field_path=f"boq_profile.boq_item_details[{item_index}].computed_total.procured_weight_kg",
+                right_field_path=f"workbook_profile.general_item_rows[{item_index}].total_weight_ton * 1000",
+                left_value=boq_weight_kg,
+                right_value=float(general_weight_ton) * 1000,
+                tolerance_rel=0.05,
+                informational_only=True,
+            )
+        )
+
+    return checks
+
+
 def run_cross_checks(
     general_data: dict,
     bid_s_data: dict,
     top_sheet_data: dict,
     cash_flow_data: dict | None = None,
     mat_breakup_data: dict | None = None,
+    boq_data: dict | None = None,
+    general_item_rows: list | None = None,
 ) -> list[CrossCheck]:
     checks = []
     checks.extend(
@@ -358,6 +397,14 @@ def run_cross_checks(
                 bid_s_material_line=_line_by_canonical(bid_s_data.get("bid_summary_lines"), "material"),
                 bid_s_meta=bid_s_data.get("bid_meta", {}),
                 mat_items=_deep_get(mat_breakup_data, "material_decomposition", "items") or [],
+            )
+        )
+
+    if boq_data and general_item_rows:
+        checks.extend(
+            run_boq_cross_checks(
+                boq_item_details=boq_data.get("boq_item_details", []),
+                general_item_rows=general_item_rows,
             )
         )
 

@@ -162,9 +162,24 @@ def test_cross_checks_include_expected_codes_and_informational_direct_cost_note(
                 ],
             }
         },
+        boq_data={
+            "boq_item_details": [
+                {
+                    "item_block_index": 1,
+                    "computed_total": {
+                        "procured_weight_kg": 14666.82082534326,
+                    },
+                }
+            ]
+        },
+        general_item_rows=[
+            {
+                "total_weight_ton": 14.66682082534326,
+            }
+        ],
     )
 
-    assert len(checks) == 24
+    assert len(checks) == 25
 
     by_code = {check.code: check for check in checks}
     assert by_code["GENERAL_vs_BID_S_INQUIRY_NO"].status == "pass"
@@ -182,6 +197,7 @@ def test_cross_checks_include_expected_codes_and_informational_direct_cost_note(
     assert by_code["MAT_BREAKUP_TOTAL_vs_BID_S_MATERIAL"].status == "pass"
     assert by_code["MAT_BREAKUP_FINISH_WT_vs_BID_S_WEIGHT"].status == "pass"
     assert by_code["MAT_BREAKUP_ITEM_SUM_vs_SUMMARY"].status == "pass"
+    assert by_code["BOQ_ITEM_1_WEIGHT_vs_GENERAL"].status == "pass"
 
 
 def test_cross_checks_mark_missing_values_as_skipped():
