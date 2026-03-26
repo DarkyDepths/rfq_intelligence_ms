@@ -52,6 +52,32 @@ class OverrideReader(WorkbookReader):
         return self._base.get_merged_regions_count(sheet_name)
 
 
+class MissingCashFlowSheetReader(WorkbookReader):
+    def open(self, workbook_path: str) -> None:
+        return None
+
+    def get_sheet_names(self) -> list[str]:
+        return ["General", "Bid S", "Top Sheet"]
+
+    def has_sheet(self, sheet_name: str) -> bool:
+        return sheet_name != "Cash Flow"
+
+    def get_cell_value(self, sheet_name: str, row: int, col: int) -> object:
+        return None
+
+    def get_label_value(self, sheet_name: str, row: int, col: int) -> str | None:
+        return None
+
+    def get_numeric_value(self, sheet_name: str, row: int, col: int) -> float | None:
+        return None
+
+    def get_date_value(self, sheet_name: str, row: int, col: int) -> str | None:
+        return None
+
+    def get_merged_regions_count(self, sheet_name: str) -> int:
+        return 0
+
+
 def _build_reader() -> XlsWorkbookReader:
     reader = XlsWorkbookReader()
     reader.open(FIXTURE_PATH.as_posix())
@@ -116,3 +142,18 @@ def test_cash_flow_extractor_reports_anchor_mismatch_and_blank_line_label_as_war
     assert result.sheet_report.rows_scanned == 7
     assert result.sheet_report.rows_kept == 6
     assert result.sheet_report.rows_skipped == 1
+
+
+def test_cash_flow_extractor_missing_sheet_returns_failed_result():
+    reader = MissingCashFlowSheetReader()
+    result = CashFlowExtractor(reader).extract()
+
+    issue_codes = {issue.code for issue in result.issues}
+    assert "CASH_FLOW_MISSING_REQUIRED_SHEET" in issue_codes
+    assert result.sheet_report.status == "failed"
+    assert result.sheet_report.error_count == 1
+    assert result.cash_flow_lines == []
+    assert result.identity_mirror.inquiry_no is None
+    assert result.identity_mirror.project_name is None
+    assert result.identity_mirror.client_name is None
+    assert result.identity_mirror.dated is None
