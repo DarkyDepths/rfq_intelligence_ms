@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Step 16 — Workbook Parser Implementation Blueprint v2.1 (Pack 2)</title>
+<style>
+  :root{--bg:#0b0f14;--surface:#141a22;--surface-2:#1a2230;--border:#2a3545;--ink:#e8edf4;--ink-2:#bcc5d2;--ink-3:#8895a7;--ink-4:#5e6b7d;--blue:#5b9cf5;--blue-dim:#5b9cf520;--green:#4eca7a;--green-dim:#4eca7a20;--amber:#e0a83a;--amber-dim:#e0a83a20;--red:#ef6461;--red-dim:#ef646120;--purple:#b48eff;--purple-dim:#b48eff18;--cyan:#56d4c8;--cyan-dim:#56d4c818;--mono:'JetBrains Mono','Fira Code','SF Mono',Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink-2);font-size:14.5px;line-height:1.7}
+  .w{max-width:1020px;margin:0 auto;padding:48px 28px 120px}
+  nav{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 28px;margin:0 -28px 40px;overflow-x:auto;white-space:nowrap}
+  nav a{color:var(--ink-3);text-decoration:none;font-size:12px;font-weight:500;letter-spacing:.3px;margin-right:16px;transition:color .15s}nav a:hover{color:var(--blue)}
+  h1{font-size:26px;font-weight:700;color:var(--ink);margin-bottom:6px;letter-spacing:-.5px}
+  .sub{color:var(--ink-3);font-size:13.5px;margin-bottom:36px}.sub code{background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--ink-2)}
+  h2{font-size:19px;font-weight:600;color:var(--ink);margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h3{font-size:15px;font-weight:600;color:var(--ink);margin:24px 0 10px}h4{font-size:14px;font-weight:600;color:var(--ink-2);margin:14px 0 6px}
+  .n{display:inline-block;width:32px;color:var(--blue);font-weight:700;font-size:14px}
+  code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:2px 5px;border-radius:3px;color:var(--cyan)}
+  pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;font-size:12px;line-height:1.55;color:var(--ink-2);margin:12px 0;font-family:var(--mono)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+  th{background:var(--surface-2);color:var(--ink);font-weight:600;text-align:left;padding:8px 10px;border:1px solid var(--border)}
+  td{padding:6px 10px;border:1px solid var(--border);vertical-align:top}
+  .cb{border-radius:8px;padding:16px 20px;margin:16px 0}.ct{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .c-blue{background:var(--blue-dim);border-left:3px solid var(--blue)}.c-blue .ct{color:var(--blue)}
+  .c-green{background:var(--green-dim);border-left:3px solid var(--green)}.c-green .ct{color:var(--green)}
+  .c-amber{background:var(--amber-dim);border-left:3px solid var(--amber)}.c-amber .ct{color:var(--amber)}
+  .c-red{background:var(--red-dim);border-left:3px solid var(--red)}.c-red .ct{color:var(--red)}
+  .c-purple{background:var(--purple-dim);border-left:3px solid var(--purple)}.c-purple .ct{color:var(--purple)}
+  .c-cyan{background:var(--cyan-dim);border-left:3px solid var(--cyan)}.c-cyan .ct{color:var(--cyan)}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:3px;letter-spacing:.3px;vertical-align:middle}
+  .tg{background:var(--green-dim);color:var(--green)}.ta{background:var(--amber-dim);color:var(--amber)}.tr{background:var(--red-dim);color:var(--red)}
+  ul{margin:8px 0 12px 20px}li{margin-bottom:4px}
+  .tree{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 24px;font-family:var(--mono);font-size:12.5px;line-height:1.8;white-space:pre;overflow-x:auto;margin:12px 0}
+  .tree .dir{color:var(--blue);font-weight:600}.tree .new{color:var(--green);font-weight:500}.tree .touch{color:var(--amber);font-weight:500}.tree .note{color:var(--ink-4);font-style:italic}
+  .phase{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:12px 0}
+  .phase-num{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--purple);margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="w">
+
+<nav>
+  <a href="#s1">Context</a>
+  <a href="#s2">Tree</a>
+  <a href="#s3">Contracts</a>
+  <a href="#s4">SoftFail</a>
+  <a href="#s5">Assembler</a>
+  <a href="#s6">CrossChecks</a>
+  <a href="#s7">Orchestrator</a>
+  <a href="#s8">Tests</a>
+  <a href="#s9">Sequence</a>
+</nav>
+
+<h1>Step 16 — Workbook Parser Implementation Blueprint v2.1</h1>
+<p class="sub">
+  Service: <code>rfq_intelligence_ms</code> &nbsp;|&nbsp; Pack 2 &nbsp;|&nbsp; Schema: <code>Implementation Pack v2.1</code><br>
+  Verified against: <code>github.com/DarkyDepths/rfq_intelligence_ms</code> @ main<br>
+  <strong>v2.1 changes vs v2.0:</strong> Envelope shape aligned to Pack v2.1. Soft-fail returns 3-state result. B-O-Q cross-checks fully specified. Touched-file count corrected to 6. <code>financial_profile</code> marked as partial Pack 2 scope.
+</p>
+
+<div class="cb c-blue"><div class="ct">What this blueprint defines</div>
+Every file to create or modify, every class/function change, the exact assembler and cross-checker modifications, and the implementation sequence. Verified against the actual repo structure. Produces the canonical envelope shape defined in Implementation Pack v2.1 §06.</div>
+
+
+<!-- ============================================================ -->
+<!-- S1 -->
+<!-- ============================================================ -->
+<h2 id="s1"><span class="n">01</span> Context</h2>
+
+<h3>1.1 Current flow (Pack 1)</h3>
+<pre>WorkbookParserOrchestrator.parse()
+  → XlsWorkbookReader.open()
+  → TemplateMatcher.validate()
+  → GeneralExtractor → BidSExtractor → TopSheetExtractor
+  → run_cross_checks() → build_envelope() → asdict() → return dict</pre>
+
+<h3>1.2 Pack 2 extends to</h3>
+<pre>  ... same Pack 1 flow ...
+  → _try_extract("Cash Flow", CashFlowExtractor, CashFlowExtractionResult)
+  → _try_extract("Mat Break-up", MatBreakupExtractor, MatBreakupExtractionResult)
+  → _try_extract("B-O-Q", BoqExtractor, BoqExtractionResult)
+  → run_cross_checks(... + pack2 data)
+  → build_envelope(... + pack2 results) → dict with boq_profile top-level</pre>
+
+
+<!-- ============================================================ -->
+<!-- S2 -->
+<!-- ============================================================ -->
+<h2 id="s2"><span class="n">02</span> File Tree</h2>
+
+<div class="cb c-amber"><div class="ct">6 new files, 6 touched files</div>
+No new BACAB layer files. All modifications are additive — no existing logic removed.</div>
+
+<div class="tree"><span class="dir">src/services/workbook_parser/</span>
+├── <span class="touch">parser_orchestrator.py</span>              <span class="note"># TOUCHED — add _try_extract + 3 Pack 2 calls</span>
+├── <span class="touch">assembler.py</span>                        <span class="note"># TOUCHED — add boq_profile, material_decomposition, financial_profile</span>
+├── <span class="touch">contracts.py</span>                        <span class="note"># TOUCHED — add Pack 2 dataclasses + BoqProfile + extend CostBreakdownProfile + extend Envelope</span>
+├── <span class="touch">cross_checks.py</span>                     <span class="note"># TOUCHED — add Cash Flow + Mat Break-up + B-O-Q cross-checks</span>
+├── <span class="touch">issues.py</span>                           <span class="note"># TOUCHED — extend SheetName + SheetReports</span>
+├── <span class="dir">extractors/</span>
+│   ├── <span class="new">cash_flow_extractor.py</span>          <span class="note"># NEW</span>
+│   ├── <span class="new">mat_breakup_extractor.py</span>        <span class="note"># NEW</span>
+│   └── <span class="new">boq_extractor.py</span>                <span class="note"># NEW</span>
+<span class="dir">tests/workbook_parser/</span>
+├── <span class="touch">test_parser_orchestrator_e2e.py</span>     <span class="note"># TOUCHED — extend for Pack 2</span>
+├── <span class="new">test_cash_flow_extractor.py</span>         <span class="note"># NEW</span>
+├── <span class="new">test_mat_breakup_extractor.py</span>       <span class="note"># NEW</span>
+└── <span class="new">test_boq_extractor.py</span>               <span class="note"># NEW</span>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- S3 -->
+<!-- ============================================================ -->
+<h2 id="s3"><span class="n">03</span> Contract Extensions — <code>contracts.py</code> + <code>issues.py</code></h2>
+
+<h3>3.1 <code>issues.py</code></h3>
+<pre># Extend SheetName
+SheetName = Literal["General", "Bid S", "Top Sheet", "Cash Flow", "Mat Break-up", "B-O-Q"]
+
+# Extend SheetReports
+@dataclass(frozen=True)
+class SheetReports:
+    general: SheetReport
+    bid_s: SheetReport
+    top_sheet: SheetReport
+    cash_flow: SheetReport | None = None
+    mat_breakup: SheetReport | None = None
+    boq: SheetReport | None = None</pre>
+
+<h3>3.2 <code>contracts.py</code> — new dataclasses</h3>
+<p>All Pack 2 dataclasses follow the same <code>@dataclass(frozen=True)</code> pattern. Full definitions are in Implementation Pack v2.1 §06. Key types:</p>
+<pre># Cash Flow: CashFlowIdentityMirror → in RfqIdentityMirrorCashFlow
+#            CashFlowMonthlyValues, CashFlowLine, CashFlowSummary, FinancialProfile
+
+# Mat Break-up: MaterialCategoryRow, MaterialCategoryTotals,
+#               MaterialDecompositionItem, MaterialDecompositionSummary, MaterialDecomposition
+
+# B-O-Q: BoqComponentRow, BoqGrandTotal, BoqItemDetail, MaterialPriceEntry
+
+# NEW top-level block:
+@dataclass(frozen=True)
+class BoqProfile:
+    boq_item_details: list[BoqItemDetail] = field(default_factory=list)
+    material_price_table: list[MaterialPriceEntry] = field(default_factory=list)</pre>
+
+<h3>3.3 <code>contracts.py</code> — extend existing types</h3>
+<pre># CostBreakdownProfile — add Pack 2 sub-blocks
+@dataclass(frozen=True)
+class CostBreakdownProfile:
+    # Pack 1 fields unchanged...
+    material_decomposition: MaterialDecomposition | None = None   # Pack 2
+    financial_profile: FinancialProfile | None = None             # Pack 2 (Cash Flow slice)
+
+# WorkbookParseEnvelope — add boq_profile
+@dataclass(frozen=True)
+class WorkbookParseEnvelope:
+    # ... all Pack 1 fields unchanged ...
+    boq_profile: BoqProfile | None = None                        # Pack 2 NEW top-level
+
+# WorkbookProfile — NO CHANGES (stays Pack 1 only)</pre>
+
+<h3>3.4 Per-extractor result types (in each extractor file)</h3>
+<pre># cash_flow_extractor.py → CashFlowExtractionResult
+#   fields: identity_mirror, cash_flow_lines, cash_flow_summary, anchor_checks, issues, sheet_report
+
+# mat_breakup_extractor.py → MatBreakupExtractionResult
+#   fields: material_decomposition, material_cost_loading_present, anchor_checks, issues, sheet_report
+
+# boq_extractor.py → BoqExtractionResult
+#   fields: boq_item_details, material_price_table, anchor_checks, issues, sheet_report</pre>
+
+
+<!-- ============================================================ -->
+<!-- S4: SOFT-FAIL -->
+<!-- ============================================================ -->
+<h2 id="s4"><span class="n">04</span> Soft-Fail Contract — Three Distinct Outcomes</h2>
+
+<div class="cb c-red"><div class="ct">Missing ≠ Failed — these must be distinguishable in parser_report</div>
+<strong>None</strong> = sheet absent from workbook → sheet report is <code>"skipped"</code>, artifact field is <code>null</code>.<br>
+<strong>Failed result</strong> = sheet present but extraction crashed → sheet report is <code>"failed"</code> with the error captured in <code>issues</code>, artifact field is <code>null</code>, error is visible in <code>parser_report.errors</code>.<br>
+<strong>Success result</strong> = normal extraction → sheet report is <code>"parsed_ok"</code> or <code>"parsed_with_warnings"</code>, artifact data is assembled.</div>
+
+<pre>def _try_extract(self, sheet_name: str, extractor_class, result_class):
+    """Three outcomes: None (missing), failed result (crashed), success result."""
+    if not self._reader.has_sheet(sheet_name):
+        return None  # → assembler treats as "skipped"
+
+    try:
+        return extractor_class(self._reader).extract()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Pack 2 extraction failed for '{sheet_name}': {e}")
+
+        error_issue = ParserIssue(
+            code=f"{sheet_name.upper().replace(' ','_').replace('-','_')}_EXTRACTION_FAILED",
+            severity="error", sheet_name=sheet_name,
+            cell_ref=None, row_number=None, field_path=None,
+            message=f"Extractor crashed: {e}",
+            expected_value=None, actual_value=None, raw_value=None,
+        )
+        failed_report = SheetReport(
+            sheet_name=sheet_name, status="failed",
+            merged_regions_count=None, expected_body_range=None,
+            rows_scanned=0, rows_kept=0, rows_skipped=0,
+            warning_count=0, error_count=1,
+        )
+        return result_class(
+            anchor_checks=[], issues=[error_issue], sheet_report=failed_report,
+        )  # → assembler sees result exists but status="failed" → artifact null, error propagated</pre>
+
+<h3>4.1 Assembler helper for result status</h3>
+<pre>def _pack2_ok(result) -> bool:
+    """True if result exists AND extraction succeeded (not failed)."""
+    return result is not None and result.sheet_report.status != "failed"
+
+def _pack2_has_report(result) -> bool:
+    """True if result exists (even if failed) — has a sheet_report to propagate."""
+    return result is not None</pre>
+
+
+<!-- ============================================================ -->
+<!-- S5: ASSEMBLER -->
+<!-- ============================================================ -->
+<h2 id="s5"><span class="n">05</span> Assembler — <code>build_envelope()</code></h2>
+
+<h3>5.1 Updated signature</h3>
+<pre>def build_envelope(
+    ...,  # all Pack 1 params unchanged
+    cash_flow_result: CashFlowExtractionResult | None = None,
+    mat_breakup_result: MatBreakupExtractionResult | None = None,
+    boq_result: BoqExtractionResult | None = None,
+) -> dict:</pre>
+
+<h3>5.2 Envelope construction — v2.1 shape</h3>
+<pre>PARSER_VERSION = "workbook-parser-v2.1"
+
+# CostBreakdownProfile — extended with Pack 2 sub-blocks
+cost_breakdown_profile = CostBreakdownProfile(
+    # Pack 1 fields unchanged...
+    material_decomposition=(
+        mat_breakup_result.material_decomposition if _pack2_ok(mat_breakup_result) else None
+    ),
+    financial_profile=(
+        FinancialProfile(
+            identity_mirror=cash_flow_result.identity_mirror,
+            cash_flow_lines=cash_flow_result.cash_flow_lines,
+            cash_flow_summary=cash_flow_result.cash_flow_summary,
+        ) if _pack2_ok(cash_flow_result) else None
+    ),
+)
+
+# BoqProfile — NEW top-level
+boq_profile = None
+if _pack2_ok(boq_result):
+    boq_profile = BoqProfile(
+        boq_item_details=boq_result.boq_item_details,
+        material_price_table=boq_result.material_price_table,
+    )
+
+# WorkbookProfile — unchanged from Pack 1 (no boq_item_details here)
+workbook_profile = WorkbookProfile(...)  # same as before
+
+# SheetReports — None if missing, failed report if crashed, normal if success
+sheet_reports = SheetReports(
+    general=..., bid_s=..., top_sheet=...,  # Pack 1 unchanged
+    cash_flow=cash_flow_result.sheet_report if _pack2_has_report(cash_flow_result) else None,
+    mat_breakup=mat_breakup_result.sheet_report if _pack2_has_report(mat_breakup_result) else None,
+    boq=boq_result.sheet_report if _pack2_has_report(boq_result) else None,
+)
+
+# Envelope
+envelope = WorkbookParseEnvelope(
+    ...,  # Pack 1 fields
+    parser_version=PARSER_VERSION,
+    boq_profile=boq_profile,  # NEW top-level
+)</pre>
+
+
+<!-- ============================================================ -->
+<!-- S6: CROSS-CHECKS — ALL THREE SHEETS FULLY SPECIFIED -->
+<!-- ============================================================ -->
+<h2 id="s6"><span class="n">06</span> Cross-Checks — All Three Sheets</h2>
+
+<h3>6.1 Updated <code>run_cross_checks</code></h3>
+<pre>def run_cross_checks(
+    general_data, bid_s_data, top_sheet_data,
+    cash_flow_data=None, mat_breakup_data=None,
+    boq_data=None, general_item_rows=None,
+) -> list[CrossCheck]:
+    checks = []
+    checks.extend(run_identity_cross_checks(...))   # Pack 1
+    checks.extend(run_numeric_cross_checks(...))    # Pack 1
+
+    if cash_flow_data:
+        checks.extend(run_cash_flow_cross_checks(
+            cash_flow_identity=cash_flow_data["identity_mirror"],
+            general_identity=general_data["rfq_identity"],
+            cash_flow_summary=cash_flow_data["cash_flow_summary"],
+            bid_s_summary=bid_s_data["bid_summary"],
+            top_sheet_summary=top_sheet_data["top_sheet_summary"],
+        ))
+    if mat_breakup_data:
+        checks.extend(run_mat_breakup_cross_checks(
+            mat_summary_total=_deep_get(mat_breakup_data, "material_decomposition", "summary", "grand_total"),
+            bid_s_material_line=_line_by_canonical(bid_s_data["bid_summary_lines"], "material"),
+            bid_s_meta=bid_s_data["bid_meta"],
+            mat_items=_deep_get(mat_breakup_data, "material_decomposition", "items") or [],
+        ))
+    if boq_data and general_item_rows:
+        checks.extend(run_boq_cross_checks(
+            boq_item_details=boq_data["boq_item_details"],
+            general_item_rows=general_item_rows,
+        ))
+    return checks</pre>
+
+<h3>6.2 Cash Flow cross-checks (5 checks)</h3>
+<pre>def run_cash_flow_cross_checks(cash_flow_identity, general_identity,
+                                cash_flow_summary, bid_s_summary, top_sheet_summary):
+    checks = []
+    # 3 identity checks: inquiry_no, client_name, project_name vs General
+    for fld in ["inquiry_no", "client_name", "project_name"]:
+        checks.append(_exact_check(
+            code=f"CASH_FLOW_vs_GENERAL_{fld.upper()}",
+            left_field_path=f"cost_breakdown_profile.financial_profile.identity_mirror.{fld}",
+            right_field_path=f"workbook_profile.rfq_identity.{fld}",
+            left_value=_value(cash_flow_identity, fld),
+            right_value=_value(general_identity, fld),
+        ))
+    # Inflow vs Bid S Grand Total (tight)
+    checks.append(_numeric_check(
+        code="CASH_FLOW_INFLOW_vs_BID_S_GRAND_TOTAL",
+        left_field_path="cost_breakdown_profile.financial_profile.cash_flow_summary.total_inflow_sr",
+        right_field_path="cost_breakdown_profile.bid_summary.grand_total.amount_sar",
+        left_value=_value(cash_flow_summary, "total_inflow_sr"),
+        right_value=_value(_value(bid_s_summary, "grand_total"), "amount_sar"),
+        tolerance_abs=0.01,
+    ))
+    # Inflow vs Top Sheet Revenue (loose, informational)
+    checks.append(_numeric_check(
+        code="CASH_FLOW_INFLOW_vs_TOP_SHEET_REVENUE",
+        left_field_path="cost_breakdown_profile.financial_profile.cash_flow_summary.total_inflow_sr",
+        right_field_path="cost_breakdown_profile.top_sheet_summary.total_revenue.rev00_value",
+        left_value=_value(cash_flow_summary, "total_inflow_sr"),
+        right_value=_value(_value(top_sheet_summary, "total_revenue"), "rev00_value"),
+        tolerance_abs=10.0, informational_only=True,
+    ))
+    return checks</pre>
+
+<h3>6.3 Mat Break-up cross-checks (3 checks)</h3>
+<pre>def run_mat_breakup_cross_checks(mat_summary_total, bid_s_material_line, bid_s_meta, mat_items):
+    checks = []
+    # Total vs Bid S material SAR
+    checks.append(_numeric_check(
+        code="MAT_BREAKUP_TOTAL_vs_BID_S_MATERIAL",
+        left_field_path="cost_breakdown_profile.material_decomposition.summary.grand_total.cost_total_sr",
+        right_field_path="cost_breakdown_profile.bid_summary_lines[material].amount_sar",
+        left_value=_value(mat_summary_total, "cost_total_sr"),
+        right_value=_value(bid_s_material_line, "amount_sar"),
+        tolerance_abs=0.01,
+    ))
+    # Finish weight vs Bid S weight
+    checks.append(_numeric_check(
+        code="MAT_BREAKUP_FINISH_WT_vs_BID_S_WEIGHT",
+        left_field_path="cost_breakdown_profile.material_decomposition.summary.grand_total.weight_finish_ton",
+        right_field_path="workbook_profile.bid_meta.total_weight_ton",
+        left_value=_value(mat_summary_total, "weight_finish_ton"),
+        right_value=_value(bid_s_meta, "total_weight_ton"),
+        tolerance_abs=0.01,
+    ))
+    # Item sum vs summary
+    item_cost_sum = sum(_value(_value(item, "grand_total"), "cost_total_sr") or 0 for item in mat_items)
+    checks.append(_numeric_check(
+        code="MAT_BREAKUP_ITEM_SUM_vs_SUMMARY",
+        left_field_path="sum(material_decomposition.items[*].grand_total.cost_total_sr)",
+        right_field_path="cost_breakdown_profile.material_decomposition.summary.grand_total.cost_total_sr",
+        left_value=item_cost_sum,
+        right_value=_value(mat_summary_total, "cost_total_sr"),
+        tolerance_abs=0.01,
+    ))
+    return checks</pre>
+
+<h3>6.4 B-O-Q cross-checks (per-item, variable count)</h3>
+<pre>def run_boq_cross_checks(boq_item_details, general_item_rows):
+    """Per-item weight: BOQ computed procured_weight_kg / 1000 vs General total_weight_ton."""
+    checks = []
+    for boq_item in boq_item_details:
+        idx = _value(boq_item, "item_block_index")
+        computed = _value(boq_item, "computed_total")
+        boq_weight_kg = _value(computed, "procured_weight_kg") or 0
+        if boq_weight_kg == 0 or idx is None:
+            continue
+        if idx <= len(general_item_rows):
+            gen_item = general_item_rows[idx - 1]
+            gen_weight_ton = _value(gen_item, "total_weight_ton")
+            if gen_weight_ton and gen_weight_ton > 0:
+                checks.append(_numeric_check(
+                    code=f"BOQ_ITEM_{idx}_WEIGHT_vs_GENERAL",
+                    left_field_path=f"boq_profile.boq_item_details[{idx}].computed_total.procured_weight_kg",
+                    right_field_path=f"workbook_profile.general_item_rows[{idx}].total_weight_ton * 1000",
+                    left_value=boq_weight_kg,
+                    right_value=gen_weight_ton * 1000,
+                    tolerance_rel=0.05,
+                    informational_only=True,
+                ))
+    return checks</pre>
+
+
+<!-- ============================================================ -->
+<!-- S7: ORCHESTRATOR -->
+<!-- ============================================================ -->
+<h2 id="s7"><span class="n">07</span> Orchestrator — <code>parser_orchestrator.py</code></h2>
+
+<pre>def parse(self, workbook_path, rfq_id, workbook_file_name=None, workbook_blob_path=None):
+    workbook = Path(workbook_path)
+    self._reader.open(workbook.as_posix())
+
+    # Pack 1 (unchanged)
+    match_result = TemplateMatcher(self._reader).validate()
+    general_result = GeneralExtractor(self._reader).extract()
+    bid_s_result = BidSExtractor(self._reader).extract()
+    top_sheet_result = TopSheetExtractor(self._reader).extract()
+
+    # Pack 2 (soft-fail: None=missing, failed result=crashed, success=normal)
+    cash_flow_result = self._try_extract("Cash Flow", CashFlowExtractor, CashFlowExtractionResult)
+    mat_breakup_result = self._try_extract("Mat Break-up", MatBreakupExtractor, MatBreakupExtractionResult)
+    boq_result = self._try_extract("B-O-Q", BoqExtractor, BoqExtractionResult)
+
+    # Cross-checks — only pass data for successful Pack 2 extractions
+    def _p2_data(result):
+        """Convert extraction result to dict for cross-checks, only if successful."""
+        if result is None or result.sheet_report.status == "failed":
+            return None
+        return {k: v for k, v in result.__dict__.items() if k not in {"anchor_checks", "issues", "sheet_report"}}
+
+    checks = run_cross_checks(
+        general_data={"rfq_identity": general_result.rfq_identity,
+                      "general_summary": general_result.general_summary},
+        bid_s_data={"identity_mirror": bid_s_result.identity_mirror,
+                    "bid_meta": bid_s_result.bid_meta,
+                    "bid_summary_lines": bid_s_result.bid_summary_lines,
+                    "bid_summary": bid_s_result.bid_summary},
+        top_sheet_data={"identity_mirror": top_sheet_result.identity_mirror,
+                        "top_sheet_lines": top_sheet_result.top_sheet_lines,
+                        "top_sheet_summary": top_sheet_result.top_sheet_summary},
+        cash_flow_data=_p2_data(cash_flow_result),
+        mat_breakup_data=_p2_data(mat_breakup_result),
+        boq_data=_p2_data(boq_result),
+        general_item_rows=general_result.general_item_rows,
+    )
+
+    return build_envelope(
+        rfq_id=rfq_id,
+        workbook_file_name=workbook_file_name or workbook.name,
+        workbook_blob_path=workbook_blob_path,
+        workbook_format=workbook.suffix.lstrip(".").lower() or "xls",
+        template_match=match_result.template_match,
+        general_result=general_result,
+        bid_s_result=bid_s_result,
+        top_sheet_result=top_sheet_result,
+        cash_flow_result=cash_flow_result,
+        mat_breakup_result=mat_breakup_result,
+        boq_result=boq_result,
+        matcher_anchor_checks=match_result.anchor_checks,
+        matcher_issues=match_result.issues,
+        cross_checks=checks,
+    )</pre>
+
+
+<!-- ============================================================ -->
+<!-- S8: TESTS -->
+<!-- ============================================================ -->
+<h2 id="s8"><span class="n">08</span> Tests</h2>
+
+<h3>8.1 New extractor tests (unchanged specs from v2.0)</h3>
+<table>
+  <tr><th>File</th><th>Key assertions</th></tr>
+  <tr><td><code>test_cash_flow_extractor.py</code></td><td>7 lines. Identity: inquiry_no=IF-25144. Summary: total_inflow_sr=971150, negative_months=10, peak=−291345.05.</td></tr>
+  <tr><td><code>test_mat_breakup_extractor.py</code></td><td>50 blocks, 1 populated, 49 skipped. Grand total cost=202293.24. ERROR→null.</td></tr>
+  <tr><td><code>test_boq_extractor.py</code></td><td>48 blocks, 1 populated. Tag=K18-D-0003. Components≥100. Sections≥6. GT vs computed mismatch flagged. Price table≥20.</td></tr>
+</table>
+
+<h3>8.2 E2E test extension — covers all three blockers</h3>
+<pre>def test_pack2_envelope_shape():
+    """Verify v2.1 canonical envelope shape."""
+    envelope = WorkbookParserOrchestrator().parse(
+        workbook_path=FIXTURE_PATH.as_posix(), rfq_id="RFQ-PACK2-E2E",
+    )
+
+    # ── V2.1 envelope shape ──
+    # financial_profile lives INSIDE cost_breakdown_profile (not top-level)
+    assert "financial_profile" not in envelope  # NOT a top-level key
+    fp = envelope["cost_breakdown_profile"]["financial_profile"]
+    assert fp is not None
+    assert fp["cash_flow_summary"]["total_inflow_sr"] == 971150
+
+    # material_decomposition lives inside cost_breakdown_profile
+    md = envelope["cost_breakdown_profile"]["material_decomposition"]
+    assert md is not None
+    assert abs(md["summary"]["grand_total"]["cost_total_sr"] - 202293.24) < 0.01
+
+    # boq_profile is TOP-LEVEL (not inside workbook_profile)
+    assert "boq_item_details" not in envelope.get("workbook_profile", {})
+    boq = envelope["boq_profile"]
+    assert boq is not None
+    assert boq["boq_item_details"][0]["tag_number"] == "K18-D-0003"
+    assert len(boq["material_price_table"]) >= 20
+
+    # workbook_profile unchanged from Pack 1
+    assert "boq_item_details" not in envelope["workbook_profile"]
+    assert "material_price_table" not in envelope["workbook_profile"]
+
+    # parser_version
+    assert envelope["parser_version"] == "workbook-parser-v2.1"
+
+    # 6 sheet reports (3 required + 3 optional)
+    sr = envelope["parser_report"]["sheet_reports"]
+    assert sr["cash_flow"] is not None
+    assert sr["mat_breakup"] is not None
+    assert sr["boq"] is not None
+
+
+def test_pack2_cross_checks_include_all_three_sheets():
+    """Verify cross-checks cover CASH_FLOW, MAT_BREAKUP, and BOQ."""
+    envelope = WorkbookParserOrchestrator().parse(
+        workbook_path=FIXTURE_PATH.as_posix(), rfq_id="RFQ-PACK2-CHECKS",
+    )
+    checks = envelope["parser_report"]["cross_checks"]
+    codes = [c["code"] for c in checks]
+
+    # Cash Flow checks present
+    assert any("CASH_FLOW_vs_GENERAL" in c for c in codes)
+    assert "CASH_FLOW_INFLOW_vs_BID_S_GRAND_TOTAL" in codes
+
+    # Mat Break-up checks present
+    assert "MAT_BREAKUP_TOTAL_vs_BID_S_MATERIAL" in codes
+    assert "MAT_BREAKUP_FINISH_WT_vs_BID_S_WEIGHT" in codes
+    assert "MAT_BREAKUP_ITEM_SUM_vs_SUMMARY" in codes
+
+    # B-O-Q checks present (at least one per-item weight check)
+    boq_codes = [c for c in codes if c.startswith("BOQ_ITEM_")]
+    assert len(boq_codes) >= 1  # At least Item 1 weight check
+
+
+def test_pack2_soft_fail_visibility():
+    """If a Pack 2 sheet fails, its error appears in parser_report, not silently swallowed."""
+    # This is a design contract test — verifying the _try_extract contract.
+    # In production, if an extractor crashes:
+    #   - sheet_report.status == "failed"
+    #   - issues contain the error
+    #   - artifact field is null
+    #   - overall status may be "parsed_with_warnings" (not "failed", since Pack 2 is enrichment)
+    pass  # Implementation: mock an extractor crash, verify the failed report propagates</pre>
+
+
+<!-- ============================================================ -->
+<!-- S9: SEQUENCE -->
+<!-- ============================================================ -->
+<h2 id="s9"><span class="n">09</span> Implementation Sequence</h2>
+
+<div class="cb c-cyan"><div class="ct">Prerequisite</div>
+All Pack 1 tests pass. Tag <code>v1.1.0</code>. E2E test is the regression net.</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 1 — Cash Flow (Steps 16–18)</div>
+  <h4>Step 16: Contracts + CashFlowExtractor</h4>
+  <p>Add all Pack 2 dataclasses to <code>contracts.py</code>, extend <code>issues.py</code>. Create <code>cash_flow_extractor.py</code> + test.</p>
+  <p><strong>Deliverable:</strong> Extractor test passes — 7 lines, all reference values match.</p>
+
+  <h4>Step 17: Assembler + Orchestrator wiring</h4>
+  <p>Extend <code>build_envelope()</code>: add <code>financial_profile</code> under <code>cost_breakdown_profile</code>. Add <code>_try_extract()</code> with 3-state logic. Wire Cash Flow. Verify Pack 1 tests still pass.</p>
+  <p><strong>Deliverable:</strong> E2E extended — <code>cost_breakdown_profile.financial_profile</code> present.</p>
+
+  <h4>Step 18: Cash Flow cross-checks</h4>
+  <p>Add <code>run_cash_flow_cross_checks()</code> — 3 identity + 2 numeric = 5 checks.</p>
+  <p><strong>Deliverable:</strong> All 5 checks pass. E2E verifies CASH_FLOW codes present.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 2 — Mat Break-up (Steps 19–21)</div>
+  <h4>Step 19: MatBreakupExtractor</h4>
+  <p>Create extractor + test. 50 blocks, 1 populated, 49 skipped. ERROR→null.</p>
+
+  <h4>Step 20: Assembler integration</h4>
+  <p>Wire <code>material_decomposition</code> into <code>cost_breakdown_profile</code>.</p>
+
+  <h4>Step 21: Mat Break-up cross-checks</h4>
+  <p>Add <code>run_mat_breakup_cross_checks()</code> — 3 checks. E2E verifies MAT_BREAKUP codes.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 3 — B-O-Q (Steps 22–24)</div>
+  <h4>Step 22: BoqExtractor</h4>
+  <p>Create extractor + test. Block detection, section labels, computed totals, price table. Largest extractor.</p>
+
+  <h4>Step 23: Assembler integration</h4>
+  <p>Wire <code>boq_profile</code> as <strong>top-level</strong> on envelope.</p>
+
+  <h4>Step 24: B-O-Q cross-checks + final Pack 2 e2e</h4>
+  <p>Add <code>run_boq_cross_checks()</code> — per-item weight. Full e2e test with v2.1 shape assertions. Tag <code>v2.1.0</code>.</p>
+</div>
+
+<div class="cb c-purple"><div class="ct">After Pack 2</div>
+6 sheets parsed. Three top-level blocks: <code>workbook_profile</code> (identity/items), <code>cost_breakdown_profile</code> (cost + material + financial), <code>boq_profile</code> (physical/structural). Next: batch-seed, Pipeline P2, optionally Pack 3.</div>
+
+</div>
+</body>
+</html>
