@@ -11,17 +11,16 @@ _PACKAGE_ROOT_NAME = "SA-AYPP-6-MR-022_COLLECTION VESSEL - CDS-REV-00"
 
 def _fixture_package_root() -> Path:
     repo_root = Path(__file__).resolve().parents[2]
-    fixture_base = repo_root / "local_fixtures" / "rfq_created" / "source_package_sample_001"
-
-    direct_root = fixture_base / _PACKAGE_ROOT_NAME
-    if direct_root.exists():
-        return direct_root
-
-    nested_root = fixture_base / "client_source_folder" / _PACKAGE_ROOT_NAME
-    if nested_root.exists():
-        return nested_root
-
-    raise FileNotFoundError(f"Fixture package root not found under: {fixture_base}")
+    fixture_root = (
+        repo_root
+        / "local_fixtures"
+        / "rfq_created"
+        / "source_package_sample_001"
+        / _PACKAGE_ROOT_NAME
+    )
+    if not fixture_root.exists():
+        raise FileNotFoundError(f"Fixture package root not found: {fixture_root}")
+    return fixture_root
 
 
 def test_identity_extractor_parses_package_root_and_mismatch_mr_codes() -> None:
