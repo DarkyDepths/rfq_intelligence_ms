@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MR Package Intelligence — Implementation Pack v1.0</title>
+<style>
+  :root{--bg:#0b0f14;--surface:#141a22;--surface-2:#1a2230;--border:#2a3545;--ink:#e8edf4;--ink-2:#bcc5d2;--ink-3:#8895a7;--ink-4:#5e6b7d;--blue:#5b9cf5;--blue-dim:#5b9cf520;--green:#4eca7a;--green-dim:#4eca7a20;--amber:#e0a83a;--amber-dim:#e0a83a20;--red:#ef6461;--red-dim:#ef646120;--purple:#b48eff;--purple-dim:#b48eff18;--cyan:#56d4c8;--cyan-dim:#56d4c818;--mono:'JetBrains Mono','Fira Code','SF Mono',Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink-2);font-size:14.5px;line-height:1.7}
+  .w{max-width:1020px;margin:0 auto;padding:48px 28px 120px}
+  nav{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 28px;margin:0 -28px 40px;overflow-x:auto;white-space:nowrap}
+  nav a{color:var(--ink-3);text-decoration:none;font-size:12px;font-weight:500;letter-spacing:.3px;margin-right:16px;transition:color .15s}nav a:hover{color:var(--blue)}
+  h1{font-size:26px;font-weight:700;color:var(--ink);margin-bottom:6px;letter-spacing:-.5px}
+  .sub{color:var(--ink-3);font-size:13.5px;margin-bottom:36px}.sub code{background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--ink-2)}
+  h2{font-size:19px;font-weight:600;color:var(--ink);margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h3{font-size:15px;font-weight:600;color:var(--ink);margin:24px 0 10px}h4{font-size:14px;font-weight:600;color:var(--ink-2);margin:14px 0 6px}
+  .n{display:inline-block;width:32px;color:var(--blue);font-weight:700;font-size:14px}
+  code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:2px 5px;border-radius:3px;color:var(--cyan)}
+  pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;font-size:12px;line-height:1.55;color:var(--ink-2);margin:12px 0;font-family:var(--mono)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+  th{background:var(--surface-2);color:var(--ink);font-weight:600;text-align:left;padding:8px 10px;border:1px solid var(--border)}
+  td{padding:6px 10px;border:1px solid var(--border);vertical-align:top}
+  .cb{border-radius:8px;padding:16px 20px;margin:16px 0}.ct{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .c-blue{background:var(--blue-dim);border-left:3px solid var(--blue)}.c-blue .ct{color:var(--blue)}
+  .c-green{background:var(--green-dim);border-left:3px solid var(--green)}.c-green .ct{color:var(--green)}
+  .c-amber{background:var(--amber-dim);border-left:3px solid var(--amber)}.c-amber .ct{color:var(--amber)}
+  .c-red{background:var(--red-dim);border-left:3px solid var(--red)}.c-red .ct{color:var(--red)}
+  .c-purple{background:var(--purple-dim);border-left:3px solid var(--purple)}.c-purple .ct{color:var(--purple)}
+  .c-cyan{background:var(--cyan-dim);border-left:3px solid var(--cyan)}.c-cyan .ct{color:var(--cyan)}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:3px;letter-spacing:.3px;vertical-align:middle}
+  .tg{background:var(--green-dim);color:var(--green)}.ta{background:var(--amber-dim);color:var(--amber)}.tr{background:var(--red-dim);color:var(--red)}.tb{background:var(--blue-dim);color:var(--blue)}.tp{background:var(--purple-dim);color:var(--purple)}
+  ul{margin:8px 0 12px 20px}li{margin-bottom:4px}
+  .tree{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 24px;font-family:var(--mono);font-size:12.5px;line-height:1.8;white-space:pre;overflow-x:auto;margin:12px 0}
+  .tree .dir{color:var(--blue);font-weight:600}.tree .new{color:var(--green);font-weight:500}.tree .touch{color:var(--amber);font-weight:500}.tree .note{color:var(--ink-4);font-style:italic}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:12px 0}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px}
+  .card-t{font-weight:700;font-size:13px;color:var(--ink);margin-bottom:6px}
+  @media(max-width:768px){.g2,.g3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="w">
+
+<nav>
+  <a href="#s1">Context</a>
+  <a href="#s2">Architecture</a>
+  <a href="#s3">Pipeline</a>
+  <a href="#s4">Contracts</a>
+  <a href="#s5">Canonical Sections</a>
+  <a href="#s6">Detection Rules</a>
+  <a href="#s7">Spreadsheet Extraction</a>
+  <a href="#s8">Cross-Checks</a>
+  <a href="#s9">Artifact Shape</a>
+  <a href="#s10">Integration</a>
+  <a href="#s11">Scope Boundary</a>
+  <a href="#s12">Tree</a>
+</nav>
+
+<h1>MR Package Intelligence — Implementation Pack v1.0</h1>
+<p class="sub">
+  Service: <code>rfq_intelligence_ms</code> &nbsp;|&nbsp; Module: <code>src/services/package_parser/</code><br>
+  Validated against: <code>SA-AYPP-6-MR-022_COLLECTION VESSEL - CDS-REV-00</code> (single golden reference)<br>
+  Companion doc: <code>mr_package_intelligence_blueprint_v1.0.html</code> (the existing aligned "how" — files to create and implementation sequence)
+</p>
+
+<div class="cb c-blue"><div class="ct">What this document defines — the "what"</div>
+This is the frozen contract for the MR package parsing lane inside <code>rfq_intelligence_ms</code>. It defines <strong>what</strong> the parser must produce: the 4-stage pipeline architecture, all frozen <code>@dataclass(frozen=True)</code> contracts, the canonical section taxonomy, deterministic detection rules, spreadsheet extraction contracts, cross-reference checks, the <code>PackageParseEnvelope</code> output shape, and integration points with existing <code>intake_service.py</code> and <code>briefing_service.py</code>. Every structural assumption is validated against the single golden reference package and explicitly flagged as <strong>"validated against 1 package."</strong><br><br>
+<strong>Convention note:</strong> This follows the established repo convention. <code>workbook_parser_implementation_pack_v*.html</code> = the "what" (contracts, schemas, frozen shapes). <code>workbook_parser_blueprint_v*.html</code> = the "how" (files to create, module structure, implementation sequence). The implementation pack defines what the parser must produce; the blueprint defines how it is built. Same convention here.</div>
+
+<div class="cb c-amber"><div class="ct">Single golden reference constraint</div>
+This implementation pack is built from one real MR package: <code>SA-AYPP-6-MR-022</code>. Every detection rule, every canonical section mapping, every filename regex is verified against that sample. Rules are intentionally designed to be <em>defensive</em> — they tolerate missing sections, renamed folders, extra files, and unexpected structures. But until a second package validates these patterns, every assumption carries the tag <span class="tag ta">1-sample</span>.
+<br><br>
+<strong>Validation promotion policy:</strong> Any regex, alias, sheet-layout rule, or structural assumption derived from a single sample is tagged <code>validated_against: 1_sample</code>. When a second package confirms the pattern, promote to <code>validated_against: multi_sample</code>. When a pattern breaks against new data, the rule must be revised — not the data forced to fit. This makes every assumption explicitly challengeable by future evidence.</div>
+
+
+<!-- ============================================================ -->
+<!-- S1 — CONTEXT -->
+<!-- ============================================================ -->
+<h2 id="s1"><span class="n">01</span> Context &amp; Positioning</h2>
+
+<h3>1.1 Where this fits in the intelligence lifecycle</h3>
+<p>The <code>rfq_intelligence_ms</code> has two intelligence moments triggered by events from <code>rfq_manager_ms</code>:</p>
+
+<div class="g2">
+  <div class="card">
+    <div class="card-t" style="color:var(--green);">Moment 1 — RFQ Arrives (ZIP lane)</div>
+    <p>Triggered by <code>rfq.created</code>. The MR package (ZIP/folder) is the first real data. This implementation pack defines the parser contract for this moment.</p>
+    <p style="margin-top:8px;">Produces: <code>rfq_intake_profile</code> (enriched with package data), <code>intelligence_briefing</code> (deterministic-enriched v1 — based on structure, filenames, spreadsheets, and cross-checks; not deep document semantics).</p>
+  </div>
+  <div class="card">
+    <div class="card-t" style="color:var(--blue);">Moment 2 — Workbook Uploaded (workbook lane)</div>
+    <p>Triggered by <code>workbook.uploaded</code>. The GHI estimation workbook is the second data source. Already implemented (Pack 1 + Pack 2).</p>
+    <p style="margin-top:8px;">Produces: <code>workbook_profile</code>, <code>cost_breakdown_profile</code>, <code>parser_report</code>, <code>workbook_review_report</code>.</p>
+  </div>
+</div>
+
+<p>The two moments are designed to meet: ZIP extraction and workbook extraction share overlapping fields (project name, client, MR number, standards, weight, material types) so the <code>workbook_review_report</code> can compare what the RFQ asked for vs. how GHI priced it.</p>
+
+<h3>1.2 Current state of the ZIP lane</h3>
+<p><code>intake_service.py</code> currently produces a minimal stub <code>rfq_intake_profile</code> with only manager-provided context (rfq_code, client_name, project_title). The <code>package_structure</code> section says <em>"Source package structure is not parsed yet in this slice."</em> and <code>document_understanding</code> says <em>"Deep document parsing is not implemented."</em></p>
+<p>This implementation pack replaces the stub with real deterministic extraction from the MR package.</p>
+
+<h3>1.3 Design philosophy</h3>
+<ul>
+  <li><strong>Deterministic before probabilistic.</strong> Same principle as the workbook parser. Everything extractable by code comes first. LLM is a future second layer.</li>
+  <li><strong>Package inventory + canonical recognition + targeted extraction + artifact assembly.</strong> Four internal stages, but only two persisted artifacts: <code>rfq_intake_profile</code> and <code>intelligence_briefing</code>. The intermediate structures (inventory, registry) are embedded sections inside the artifact, not standalone persisted artifacts.</li>
+  <li><strong>Confidence taxonomy.</strong> Every extracted field carries its extraction method: <code>deterministic</code> (derived from structure/patterns), <code>heuristic</code> (strong classification clue, not guaranteed), or <code>deferred</code> (requires LLM or future capability). Never claim certainty where there is inference.</li>
+  <li><strong>Preserve unknowns, never throw them away.</strong> Extra folders, unexpected files, unrecognized structures → captured in inventory, exposed as <code>unknown_extra_sections</code>. The parser never pretends it understood everything.</li>
+</ul>
+
+
+<!-- ============================================================ -->
+<!-- S2 — ARCHITECTURE -->
+<!-- ============================================================ -->
+<h2 id="s2"><span class="n">02</span> Architecture &amp; Module Placement</h2>
+
+<h3>2.1 Parallel to <code>workbook_parser/</code></h3>
+<p>The package parser is a processing engine inside the services layer, not a service itself. It follows the same structural pattern as <code>workbook_parser/</code>:</p>
+
+<pre>workbook_parser/                          package_parser/
+├── __init__.py                           ├── __init__.py
+├── parser_orchestrator.py                ├── parser_orchestrator.py
+├── assembler.py                          ├── assembler.py
+├── contracts.py                          ├── contracts.py
+├── issues.py                             ├── issues.py
+├── cross_checks.py                       ├── cross_checks.py
+├── normalizers.py                        ├── normalizers.py
+├── template_matcher.py                   │   (no template_matcher — structure is variable)
+├── readers/                              ├── scanners/
+│   ├── workbook_reader.py                │   ├── tree_scanner.py        ← walks the filesystem
+│   └── xls_workbook_reader.py            │   └── zip_scanner.py         ← extracts ZIP then walks
+└── extractors/                           └── extractors/
+    ├── general_extractor.py                  ├── identity_extractor.py   ← MR number, revision, project
+    ├── bid_s_extractor.py                    ├── section_classifier.py   ← folders → canonical sections
+    ├── top_sheet_extractor.py                ├── standards_extractor.py  ← folder 06 standards
+    ├── cash_flow_extractor.py                ├── bom_extractor.py        ← folder 02 BOM Excel
+    ├── mat_breakup_extractor.py              ├── rvl_extractor.py        ← folder 03 RVL docx/pdf
+    └── boq_extractor.py                      ├── compliance_extractor.py ← folder 15 compliance xlsx
+                                              └── sa175_extractor.py      ← folder 07 form detection</pre>
+
+<h3>2.2 BACAB layer boundaries</h3>
+<pre>HTTP path:    routes → controllers → services → datasources/connectors
+Event path:   event_handlers → services → datasources/connectors
+
+package_parser sits INSIDE the services layer:
+  intake_service.py → package_parser.parse() → PackageParseEnvelope
+  intake_service.py → builds rfq_intake_profile artifact from envelope
+  briefing_service.py → consumes intake artifact → enriches intelligence_briefing</pre>
+
+<p>The parser never touches the database. It receives a local filesystem path (or ZIP path), returns a frozen dict envelope. Persistence is the service layer's job.</p>
+
+<h3>2.3 Input contract</h3>
+<p>The parser receives a local path to either:</p>
+<ul>
+  <li>A <strong>directory</strong> (already extracted MR package folder)</li>
+  <li>A <strong>ZIP file</strong> (extracted to a temporary directory first, then walked)</li>
+</ul>
+<p>In cold-start V1, the path comes from <code>ManagerConnector.fetch_package_local_path()</code> — identical pattern to <code>fetch_workbook_local_path()</code>. In production, it will come from Azure Blob Storage download → local temp path.</p>
+
+
+<!-- ============================================================ -->
+<!-- S3 — PIPELINE -->
+<!-- ============================================================ -->
+<h2 id="s3"><span class="n">03</span> Four-Stage Pipeline</h2>
+
+<p>The parser orchestrator executes four sequential stages. Each stage receives the output of the previous one. The pipeline always completes — individual stage failures produce partial results, never crash the whole pipeline.</p>
+
+<div class="cb c-green"><div class="ct">Stage A — Package Scan</div>
+<strong>Input:</strong> Local filesystem path (directory or ZIP).<br>
+<strong>Output:</strong> <code>PackageInventory</code> — raw tree of every folder and file with normalized paths, sizes, extensions, depth levels.<br>
+<strong>Method:</strong> 100% deterministic. <code>os.walk()</code> + <code>pathlib</code>. ZIP extraction via <code>zipfile</code> when input is a ZIP file.<br>
+<strong>Failure mode:</strong> If the path doesn't exist or ZIP is corrupt → the entire pipeline returns a failed result with error issue. No partial inventory.<br><br>
+<strong>Hidden/system files policy:</strong> The inventory captures <em>everything</em>, including <code>.DS_Store</code>, <code>Thumbs.db</code>, <code>__MACOSX/</code>, and similar OS artifacts. Each <code>FileEntry</code> carries an <code>is_system_file</code> flag (True for dotfiles, <code>Thumbs.db</code>, <code>__MACOSX</code> contents). Business-level counts (<code>total_files</code>, section <code>file_count</code>) exclude system files. The parser report flags their presence as informational noise, never as warnings or errors.
+</div>
+
+<div class="cb c-green"><div class="ct">Stage B — Structure Recognition</div>
+<strong>Input:</strong> <code>PackageInventory</code>.<br>
+<strong>Output:</strong> <code>SectionRegistry</code> — each top-level folder mapped to a canonical section with match method and confidence.<br>
+<strong>Method:</strong> Deterministic number-prefix detection + heuristic name matching for unnumbered folders. See §05 for the full canonical section taxonomy.<br>
+<strong>Failure mode:</strong> Always succeeds. Unrecognized folders → <code>unknown_extra_section</code>. Missing expected sections → noted in <code>missing_sections</code> list.
+</div>
+
+<div class="cb c-green"><div class="ct">Stage C — Targeted Extraction</div>
+<strong>Input:</strong> <code>PackageInventory</code> + <code>SectionRegistry</code>.<br>
+<strong>Output:</strong> Per-section extraction results (identity, BOM data, RVL vendors, standards list, SA-175 form IDs, compliance items, etc.).<br>
+<strong>Method:</strong> Deterministic for V1. Each extractor runs independently. A crashed extractor does not block others (same <code>_try_extract</code> pattern as workbook parser).<br>
+<strong>Failure mode:</strong> Per-extractor soft-fail. Three states: <code>None</code> (section not present), synthetic failed result (extractor crashed), normal result (success).
+</div>
+
+<div class="cb c-cyan"><div class="ct">Stage D — Artifact Assembly</div>
+<strong>Input:</strong> All outputs from Stages A, B, C + cross-check results.<br>
+<strong>Output:</strong> <code>PackageParseEnvelope</code> (frozen dict via <code>dataclasses.asdict()</code>).<br>
+<strong>Method:</strong> Pure data assembly. Same pattern as <code>build_envelope()</code> in the workbook parser. Computes parser status from individual stage statuses. Merges all issues, anchor checks, cross-checks.<br>
+<strong>Failure mode:</strong> Always succeeds if Stage A succeeded.
+</div>
+
+
+<!-- ============================================================ -->
+<!-- S4 — CONTRACTS -->
+<!-- ============================================================ -->
+<h2 id="s4"><span class="n">04</span> Frozen Contracts</h2>
+
+<p>All contracts are <code>@dataclass(frozen=True)</code>, same as the workbook parser. No mutable state. All fields optional with <code>None</code> defaults unless structurally required.</p>
+
+<h3>4.1 Package Inventory contracts</h3>
+
+<pre>@dataclass(frozen=True)
+class FileEntry:
+    """Single file in the package."""
+    relative_path: str                  # relative to package root
+    filename: str                       # basename
+    extension: str                      # lowercase, with dot: ".pdf", ".xlsx"
+    size_bytes: int
+    depth: int                          # 0 = root, 1 = top-level section, 2+ = nested
+    parent_folder: str                  # immediate parent folder name
+    is_mr_index: bool = False           # True if filename matches MR Index pattern
+    mr_number_in_filename: str | None = None   # extracted MR-NNN if present
+    section_prefix: str | None = None   # "02" if filename starts with "02_"
+    is_system_file: bool = False        # True for .DS_Store, Thumbs.db, __MACOSX contents
+    root_role: str | None = None        # "mr_index_root" | "internal_review_file" | "unclassified_root_extra" (only for depth=0 non-system files)
+
+
+@dataclass(frozen=True)
+class FolderEntry:
+    """Single folder in the package."""
+    relative_path: str                  # relative to package root
+    name: str                           # folder basename
+    depth: int                          # 0 = root children, 1 = subsections, etc.
+    file_count: int
+    subfolder_count: int
+    number_prefix: int | None = None    # parsed from "NN-Label" pattern
+    label: str | None = None            # text after "NN-" prefix
+
+
+@dataclass(frozen=True)
+class PackageInventory:
+    """Complete raw inventory of the MR package."""
+    package_root_name: str
+    input_type: str                     # "directory" or "zip"
+    total_files: int                    # business count: excludes system files
+    total_files_raw: int                # raw count: includes system files
+    total_folders: int
+    total_size_bytes: int
+    files: list[FileEntry]              # ALL files including system files (raw truth)
+    folders: list[FolderEntry]
+    root_files: list[FileEntry]         # files at depth 0, excludes system files
+    file_extension_counts: dict[str, int]  # business counts: excludes system files
+    system_file_count: int              # count of .DS_Store, Thumbs.db, etc.
+    scanned_at: str                     # ISO timestamp</pre>
+
+<div class="cb c-cyan"><div class="ct">Count semantics rule</div>
+All count fields in <code>PackageInventory</code>, <code>FolderEntry</code>, and <code>SectionMatch</code> are <strong>business counts</strong> — they exclude system files (<code>.DS_Store</code>, <code>Thumbs.db</code>, <code>__MACOSX</code> contents). The <code>files[]</code> list contains <strong>all</strong> files including system files (raw truth). Consumers who need the raw count use <code>total_files_raw</code> or <code>len(files)</code>. <code>FolderEntry.file_count</code> is also a business count.</div>
+
+<h4>Root-level file classification</h4>
+<p>Files at depth 0 (directly inside the package root) are classified into three categories:</p>
+<pre>RootFileRole = Literal[
+    "mr_index_root",          # root MR Index.pdf — master table of contents
+    "internal_review_file",   # CRS (Comment Review Sheet), internal review spreadsheets
+    "unclassified_root_extra" # anything else at root level
+]</pre>
+<p>Detection rules for root files:</p>
+<ul>
+  <li><code>mr_index_root</code>: filename contains "MR Index" (case-insensitive), no section suffix</li>
+  <li><code>internal_review_file</code>: filename contains "CRS" or "Internal" (case-insensitive), typically <code>.xlsx</code></li>
+  <li><code>unclassified_root_extra</code>: everything else (excluding system files)</li>
+</ul>
+<p>The <code>FileEntry</code> for root files should carry a <code>root_role</code> field. In the golden reference: <code>MR Index.pdf</code> → <code>mr_index_root</code>, <code>A.HAK_ Internal CRS-MR-022 REV-00.xlsx</code> → <code>internal_review_file</code>, <code>.DS_Store</code> → system file (excluded).</p>
+
+<h3>4.2 Section Registry contracts</h3>
+
+<pre>MatchMethod = Literal[
+    "number_prefix",      # folder name starts with "NN-"
+    "name_heuristic",     # matched by folder name similarity
+    "unmatched",          # present but not classified
+]
+
+MatchConfidence = Literal["high", "medium", "low"]
+
+
+@dataclass(frozen=True)
+class SectionMatch:
+    """Mapping of one actual folder to a canonical section."""
+    folder_name: str                    # actual folder name in package
+    folder_relative_path: str
+    canonical_key: str                  # from CanonicalSection taxonomy
+    match_method: MatchMethod
+    match_confidence: MatchConfidence
+    number_prefix: int | None           # if detected
+    file_count: int                     # content files (excluding MR Index)
+    mr_index_present: bool
+    has_subfolders: bool
+
+
+@dataclass(frozen=True)
+class SectionRegistry:
+    """Result of structure recognition."""
+    matched_sections: list[SectionMatch]
+    unmatched_folders: list[FolderEntry]
+    missing_canonical_sections: list[str]  # expected canonical keys not found
+    numbered_section_count: int
+    unnumbered_section_count: int
+    total_mr_index_count: int</pre>
+
+<h3>4.3 Identity contracts</h3>
+
+<pre>@dataclass(frozen=True)
+class PackageIdentity:
+    """Identity fields extracted from the package root name and file patterns."""
+    mr_number: str | None = None              # "SA-AYPP-6-MR-022"
+    mr_number_short: str | None = None        # "MR-022"
+    revision: str | None = None               # "00"
+    material_description: str | None = None   # "COLLECTION VESSEL - CDS"
+    project_code: str | None = None           # "SA-AYPP-6" (prefix before MR)
+    package_root_name: str | None = None      # full root folder name
+
+    # Cross-reference: all MR numbers found across filenames
+    mr_numbers_in_filenames: list[str] = field(default_factory=list)
+    mr_number_mismatches: list[str] = field(default_factory=list)  # MR numbers != primary</pre>
+
+<h3>4.4 Standards extraction contracts</h3>
+
+<pre>StandardFamily = Literal["samss", "saes", "saep", "std_dwg", "other"]
+
+
+@dataclass(frozen=True)
+class StandardReference:
+    """Single standard document detected by filename."""
+    filename: str
+    standard_id: str            # "SAMSS-010", "SAES-A-004", "SAEP-1142"
+    family: StandardFamily
+    relative_path: str
+    extraction_method: str      # always "filename_regex" for V1
+
+
+@dataclass(frozen=True)
+class StandardsProfile:
+    """All standards detected in the package (primarily folder 06)."""
+    total_count: int
+    samss: list[StandardReference]
+    saes: list[StandardReference]
+    saep: list[StandardReference]
+    std_dwg: list[StandardReference]
+    other: list[StandardReference]
+    samss_count: int
+    saes_count: int
+    saep_count: int
+    std_dwg_count: int
+    subfolder_structure: list[str]   # detected subfolder names under 06</pre>
+
+<h3>4.5 BOM extraction contracts</h3>
+
+<pre>@dataclass(frozen=True)
+class BomLineItem:
+    """Single line from the Bill of Materials spreadsheet."""
+    sheet_row: int
+    mr_line_item: str | None = None        # MR L/I number
+    line_item: str | None = None           # e.g. "A.1"
+    nine_com: str | None = None            # 9COM code
+    plant_no: str | None = None            # plant code
+    pipeline: str | None = None
+    design_code: str | None = None         # e.g. "ASME SECTION VIII DIV1"
+    service: str | None = None             # e.g. "COLLECTION VESSEL"
+    material_type: str | None = None       # e.g. "Vessel"
+    location: str | None = None            # e.g. "YANBU"
+    technical_spec: str | None = None      # spec reference
+    tag_number: str | None = None          # e.g. "K18-D-0003"
+    data_sheet: str | None = None          # datasheet reference
+    reference_drawings: str | None = None
+    quantity: float | None = None
+
+
+@dataclass(frozen=True)
+class BomProfile:
+    """Extracted BOM data from folder 02."""
+    source_file: str
+    sheet_name: str
+    line_items: list[BomLineItem]
+    total_line_items: int
+    tag_numbers_found: list[str]
+    nine_com_codes_found: list[str]
+    design_codes_found: list[str]
+    locations_found: list[str]</pre>
+
+<h3>4.6 RVL extraction contracts</h3>
+
+<pre>@dataclass(frozen=True)
+class RvlVendorEntry:
+    """Single vendor from the Restricted Vendor List."""
+    nine_com: str | None = None
+    material_description: str | None = None
+    manufacturer_id: str | None = None
+    vendor_name: str | None = None
+    country_code: str | None = None
+    country_name: str | None = None
+
+
+@dataclass(frozen=True)
+class RvlProfile:
+    """Extracted RVL data from folder 03."""
+    source_file: str
+    source_format: str            # "docx" or "pdf"
+    vendors: list[RvlVendorEntry]
+    total_vendors: int
+    unique_vendor_names: list[str]
+    unique_countries: list[str]
+    nine_com_codes: list[str]
+    mr_number_in_rvl: str | None = None   # for cross-check against package identity</pre>
+
+<h3>4.7 SA-175 forms contracts</h3>
+
+<pre>@dataclass(frozen=True)
+class Sa175FormEntry:
+    """Single SA-175 form detected by filename."""
+    filename: str
+    form_number: str          # "175-010710"
+    relative_path: str
+
+
+@dataclass(frozen=True)
+class Sa175Profile:
+    """SA-175 forms detected in folder 07."""
+    forms: list[Sa175FormEntry]
+    total_count: int
+    form_numbers: list[str]</pre>
+
+<h3>4.8 Compliance extraction contracts</h3>
+
+<pre>@dataclass(frozen=True)
+class ComplianceLineItem:
+    """Single compliance requirement from the TBC compliance sheet."""
+    sheet_row: int
+    item_no: str | None = None
+    description: str | None = None
+    specified_requirement: str | None = None
+    section_label: str | None = None    # "GENERAL", "STANDARDS AND CODES", etc.
+
+
+@dataclass(frozen=True)
+class ComplianceProfile:
+    """Extracted compliance data from folder 15 WPECC-TBC compliance sheet."""
+    source_file: str
+    material_description: str | None = None
+    mr_number: str | None = None
+    nine_com: str | None = None
+    line_items: list[ComplianceLineItem]
+    total_items: int
+    section_labels: list[str]</pre>
+
+<h3>4.9 Deviation List contracts</h3>
+
+<pre>@dataclass(frozen=True)
+class DeviationProfile:
+    """Metadata extracted from the Deviation List spreadsheet in folder 15."""
+    source_file: str
+    bi_number: str | None = None
+    project_title: str | None = None
+    mr_number: str | None = None
+    material_title: str | None = None
+    total_rows: int                       # total data rows in sheet
+    has_vendor_entries: bool               # whether any vendor entries populated</pre>
+
+<h3>4.10 Parser report contracts</h3>
+<p>Reuses the same issue/report types from <code>workbook_parser/issues.py</code> with package-specific extensions:</p>
+
+<pre>PackageParserStatus = Literal["parsed_ok", "parsed_with_warnings", "failed"]
+StageName = Literal["scan", "recognition", "extraction", "assembly"]
+
+# ParserIssue, AnchorCheck, CrossCheck — reuse from workbook_parser/issues.py
+
+@dataclass(frozen=True)
+class StageReport:
+    """Report for a single pipeline stage."""
+    stage: StageName
+    status: PackageParserStatus
+    duration_ms: float | None = None
+    items_processed: int = 0
+    items_succeeded: int = 0
+    items_failed: int = 0
+    warning_count: int = 0
+    error_count: int = 0
+
+
+@dataclass(frozen=True)
+class PackageParserReport:
+    """Overall parser report across all stages."""
+    status: PackageParserStatus
+    parser_version: str
+    stages: list[StageReport]
+    warnings: list[ParserIssue]
+    errors: list[ParserIssue]
+    cross_checks: list[CrossCheck]</pre>
+
+<h3>4.11 Top-level envelope</h3>
+
+<pre>@dataclass(frozen=True)
+class PackageParseEnvelope:
+    """Top-level output of the package parser orchestrator."""
+    rfq_id: str
+    parser_version: str
+    parsed_at: str                             # ISO timestamp
+    input_type: str                            # "directory" or "zip"
+    input_path: str | None
+
+    # Stage A output
+    package_inventory: PackageInventory
+
+    # Stage B output
+    package_identity: PackageIdentity
+    section_registry: SectionRegistry
+
+    # Stage C outputs (each None if section absent, failed result if crashed)
+    standards_profile: StandardsProfile | None
+    bom_profile: BomProfile | None
+    rvl_profile: RvlProfile | None
+    sa175_profile: Sa175Profile | None
+    compliance_profile: ComplianceProfile | None
+    deviation_profile: DeviationProfile | None
+
+    # Stage D
+    parser_report: PackageParserReport</pre>
+
+<div class="cb c-red"><div class="ct">Critical boundary: internal envelope vs persisted artifacts</div>
+<code>PackageParseEnvelope</code> is an <strong>internal parser output</strong> — a transient data structure returned by the orchestrator to the calling service. It is never persisted to the database as its own artifact. The fields <code>package_inventory</code> and <code>section_registry</code> are intermediate processing structures embedded inside the envelope, not standalone domain artifacts.<br><br>
+<strong>Persisted artifacts remain exactly two:</strong> <code>rfq_intake_profile</code> and <code>intelligence_briefing</code>. The <code>intake_service</code> consumes the envelope and assembles the <code>rfq_intake_profile</code> artifact content from it. The <code>briefing_service</code> consumes the enriched intake to build the <code>intelligence_briefing</code>. No new artifact types are introduced by this implementation pack.</div>
+
+
+<!-- ============================================================ -->
+<!-- S5 — CANONICAL SECTIONS -->
+<!-- ============================================================ -->
+<h2 id="s5"><span class="n">05</span> Canonical Section Taxonomy</h2>
+
+<p>This taxonomy defines the universe of expected MR package sections. Each canonical key is a stable identifier that the system uses regardless of folder naming variations. <span class="tag ta">1-sample</span></p>
+
+<table>
+<thead>
+<tr><th>#</th><th>Canonical Key</th><th>Golden Ref Folder Name</th><th>Expected Content</th><th>V1 Extractor</th></tr>
+</thead>
+<tbody>
+<tr><td>00</td><td><code>approval_sheet</code></td><td>00-Approval Sheet</td><td>RFA approval PDF</td><td>—</td></tr>
+<tr><td>01</td><td><code>mr_checklist</code></td><td>01-MR Checklist</td><td>MR completeness checklist</td><td>—</td></tr>
+<tr><td>02</td><td><code>description_bom</code></td><td>02-MR Description-BOM</td><td>BOM xlsx, Scope of Supply, Subcomponents List</td><td><code>bom_extractor</code></td></tr>
+<tr><td>03</td><td><code>rvl</code></td><td>03-RVL</td><td>Restricted Vendor List (docx + pdf)</td><td><code>rvl_extractor</code></td></tr>
+<tr><td>04</td><td><code>specs_datasheets</code></td><td>04-Specs and Datasheet</td><td>Technical specifications, data sheets</td><td>— (LLM future)</td></tr>
+<tr><td>05</td><td><code>project_drawings</code></td><td>05-Project Drawings</td><td>P&amp;ID and engineering drawings</td><td>—</td></tr>
+<tr><td>06</td><td><code>applicable_standards</code></td><td>06-Applicable Standards</td><td>SAMSS, SAES, SAEP, STD DWG subfolders</td><td><code>standards_extractor</code></td></tr>
+<tr><td>07</td><td><code>sa175_forms</code></td><td>07-SA-175 Forms</td><td>Saudi Aramco material forms</td><td><code>sa175_extractor</code></td></tr>
+<tr><td>08</td><td><code>nmr</code></td><td>08-NMR</td><td>NMR forms, Supplier Document Schedule</td><td>—</td></tr>
+<tr><td>09</td><td><code>spdp</code></td><td>09-SPDP</td><td>SPDP reference docs</td><td>—</td></tr>
+<tr><td>10</td><td><code>qaqc_requirements</code></td><td>10-QAQC Requirements</td><td>QA/QC requirement docs</td><td>— (LLM future)</td></tr>
+<tr><td>11</td><td><code>general_requirements</code></td><td>11-General Requirements</td><td>General requirement docs</td><td>— (LLM future)</td></tr>
+<tr><td>12</td><td><code>vendor_doc_requirements</code></td><td>12-Vendor Document Requirements</td><td>Vendor document requirements</td><td>— (LLM future)</td></tr>
+<tr><td>13</td><td><code>routing_slip</code></td><td>13-Routing Slip</td><td>Routing slip PDF</td><td>—</td></tr>
+<tr><td>14</td><td><code>packing_specs</code></td><td>14-Packing Specifications</td><td>MS-8314 packing standards</td><td>—</td></tr>
+<tr><td>15</td><td><code>notes_to_vendor</code></td><td>15-Notes to Vendor</td><td>Notes, Deviation List xlsx, Compliance Sheet xlsx</td><td><code>compliance_extractor</code></td></tr>
+<tr><td>—</td><td><code>revision_history</code></td><td>Revision History-MR Comment Log</td><td>MR revision history, comments log</td><td>—</td></tr>
+<tr><td>—</td><td><code>unknown_extra_section</code></td><td>(any unrecognized folder)</td><td>Preserved in inventory, not classified</td><td>—</td></tr>
+</tbody>
+</table>
+
+<h3>5.1 Folder alias map</h3>
+<p>The classifier must tolerate naming variations. These are <em>heuristic</em> matches for when the number prefix is missing or ambiguous:</p>
+
+<table>
+<thead><tr><th>Canonical Key</th><th>Alias Patterns (lowercase contains)</th><th>Confidence</th></tr></thead>
+<tbody>
+<tr><td><code>approval_sheet</code></td><td>"approval", "rfa"</td><td>medium</td></tr>
+<tr><td><code>mr_checklist</code></td><td>"checklist"</td><td>medium</td></tr>
+<tr><td><code>description_bom</code></td><td>"description", "bom", "bill of material"</td><td>medium</td></tr>
+<tr><td><code>rvl</code></td><td>"rvl", "restricted vendor", "vendor list"</td><td>medium</td></tr>
+<tr><td><code>specs_datasheets</code></td><td>"spec", "datasheet", "data sheet"</td><td>medium</td></tr>
+<tr><td><code>project_drawings</code></td><td>"drawing", "p&amp;id"</td><td>medium</td></tr>
+<tr><td><code>applicable_standards</code></td><td>"standard", "applicable"</td><td>medium</td></tr>
+<tr><td><code>sa175_forms</code></td><td>"sa-175", "sa175", "175 form"</td><td>medium</td></tr>
+<tr><td><code>nmr</code></td><td>"nmr"</td><td>medium</td></tr>
+<tr><td><code>spdp</code></td><td>"spdp"</td><td>medium</td></tr>
+<tr><td><code>qaqc_requirements</code></td><td>"qaqc", "qa/qc", "quality"</td><td>medium</td></tr>
+<tr><td><code>general_requirements</code></td><td>"general req"</td><td>medium</td></tr>
+<tr><td><code>vendor_doc_requirements</code></td><td>"vendor doc", "vendor document req"</td><td>medium</td></tr>
+<tr><td><code>routing_slip</code></td><td>"routing", "route slip"</td><td>medium</td></tr>
+<tr><td><code>packing_specs</code></td><td>"packing", "packaging"</td><td>medium</td></tr>
+<tr><td><code>notes_to_vendor</code></td><td>"notes to vendor", "vendor notes"</td><td>medium</td></tr>
+<tr><td><code>revision_history</code></td><td>"revision", "comment log", "mr comment"</td><td>medium</td></tr>
+</tbody>
+</table>
+
+
+<!-- ============================================================ -->
+<!-- S6 — DETECTION RULES -->
+<!-- ============================================================ -->
+<h2 id="s6"><span class="n">06</span> Detection Rules</h2>
+
+<h3>6.1 Package root identity extraction</h3>
+<p>The root folder name follows the pattern: <code>{PROJECT-CODE}-MR-{NNN}_{MATERIAL-DESCRIPTION}-REV-{NN}</code></p>
+
+<pre>Regex: r'^([\w-]+-MR-\d+)[_\s]+(.+?)[-\s]*REV[-\s]*(\d+)\s*$'
+
+Example: "SA-AYPP-6-MR-022_COLLECTION VESSEL - CDS-REV-00"
+  → mr_number:            "SA-AYPP-6-MR-022"
+  → material_description: "COLLECTION VESSEL - CDS"
+  → revision:             "00"
+
+Project code extraction from MR number:
+  Regex: r'^(.+)-MR-\d+$'
+  → project_code:         "SA-AYPP-6"</pre>
+
+<h3>6.2 Numbered section detection</h3>
+<pre>Pattern: folder name starts with "NN-" where NN is 0-99
+Regex: r'^(\d{1,2})\s*[-–]\s*(.+)$'
+
+Example: "06-Applicable Standards"
+  → number_prefix: 6
+  → label:         "Applicable Standards"
+
+Match confidence: "high" (number prefix is unambiguous)</pre>
+
+<h3>6.3 MR Index file detection</h3>
+<pre>Pattern: filename matches "MR Index" (case-insensitive) optionally followed by "_NN"
+Regex: r'^MR\s*Index(?:[_\s]*(\d+))?\.\w+$'  (case-insensitive)
+
+Examples:
+  "MR Index.pdf"      → root MR Index, section_number=None
+  "MR Index_06.pdf"   → section 06 MR Index
+  "mr index_03.pdf"   → section 03 MR Index (case variation)</pre>
+
+<h3>6.4 Content file prefix detection</h3>
+<pre>Pattern: filename starts with "NN_" matching its parent section number
+Regex: r'^(\d{1,2})[_\-]'
+
+Example in folder "02-MR Description-BOM":
+  "02_BOM_SA-AYPP-6-MR-022_COLLECTION VESSEL- CDS.xlsx" → prefix=02 ✓ matches section
+  "02_Scope Of Supply.pdf" → prefix=02 ✓ matches section
+
+Cross-check: prefix should match parent section number. Mismatch → warning issue.</pre>
+
+<h3>6.5 MR number cross-reference detection</h3>
+<pre>Scan all filenames for MR-NNN pattern:
+  Regex: r'MR-(\d+)' across all file names
+
+Golden reference findings:
+  MR-022 → found in 6 files (matches package root)
+  MR-023 → found in 2 files (03-RVL/SA-AYPP-MR-023_ RVL-.docx and .pdf)
+
+Rule: any MR number != primary → added to mr_number_mismatches → cross-check warning.
+  This is a real review flag: the RVL might reference a different MR.</pre>
+
+<h3>6.6 Standards filename patterns</h3>
+<pre>All patterns are case-insensitive:
+
+SAMSS:    r'SAMSS[-_]?(\d{3})'           → "SAMSS-010", "01-SAMSS-043"
+SAES:     r'SAES[-_]?([A-Z][-_]\d{3})'   → "SAES-A-004", "SAES-W-010"
+SAEP:     r'SAEP[-_]?(\d+)'              → "SAEP-1142", "SAEP-31"
+SA-175:   r'175[-_](\d{6})'              → "175-010710", "175-321900"
+
+Numeric prefix stripping for SAMSS: "01-SAMSS-043.PDF" → strip leading "01-" → "SAMSS-043"</pre>
+
+<h3>6.7 Standards subfolder detection</h3>
+<pre>Folder 06 may contain numbered subfolders:
+  Pattern: r'^(\d+)\.\s*(.+)$'
+  Examples: "1. SAMSS" → (1, "SAMSS"), "4. STD DWG" → (4, "STD DWG")
+
+  Canonical subfolder map:
+    contains "samss" → family "samss"
+    contains "saes"  → family "saes"
+    contains "saep"  → family "saep"
+    contains "std"   → family "std_dwg"
+    otherwise        → family "other"</pre>
+
+
+<!-- ============================================================ -->
+<!-- S7 — SPREADSHEET EXTRACTION -->
+<!-- ============================================================ -->
+<h2 id="s7"><span class="n">07</span> Spreadsheet &amp; Document Extraction</h2>
+
+<h3>7.1 BOM extraction (folder 02)</h3>
+<p>Target file: <code>02_BOM_*.xlsx</code> — the Bill of Materials spreadsheet. <span class="tag ta">1-sample</span></p>
+
+<table>
+<thead><tr><th>Field</th><th>Source</th><th>Cell / Column</th><th>Validated</th></tr></thead>
+<tbody>
+<tr><td>BOM title</td><td>Sheet "BOM", row 1</td><td>E1 (merged region)</td><td>✓</td></tr>
+<tr><td>Header row</td><td>Row 5</td><td>A5:O5 (MR L/I, Line Item, 9COM, ...)</td><td>✓</td></tr>
+<tr><td>Data rows</td><td>Row 7+ until blank</td><td>A=MR L/I, B=Line Item, C=9COM, ... O=QTY</td><td>✓</td></tr>
+<tr><td>Tag number</td><td>Column L</td><td>e.g. "K18-D-0003"</td><td>✓</td></tr>
+<tr><td>Design code</td><td>Column G</td><td>e.g. "ASME SECTION VIII DIV1"</td><td>✓</td></tr>
+<tr><td>Service</td><td>Column H</td><td>e.g. "COLLECTION VESSEL"</td><td>✓</td></tr>
+<tr><td>Location</td><td>Column J</td><td>e.g. "YANBU"</td><td>✓</td></tr>
+</tbody>
+</table>
+
+<p>Detection rule: find the file in the <code>description_bom</code> section whose name matches <code>*BOM*</code> (case-insensitive) and has extension <code>.xlsx</code>. Use <code>openpyxl</code> in read-only mode. Scan for the header row by looking for "MR L/I" or "Line Item" in column A or B.</p>
+
+<h3>7.2 RVL extraction (folder 03)</h3>
+<p>Target file: <code>*.docx</code> in the <code>rvl</code> section. Falls back to <code>*.pdf</code> (not parseable in V1). <span class="tag ta">1-sample</span></p>
+
+<table>
+<thead><tr><th>Field</th><th>Source</th><th>Table Column</th><th>Validated</th></tr></thead>
+<tbody>
+<tr><td>9COM code</td><td>Table 0, column 0</td><td>"9COM"</td><td>✓</td></tr>
+<tr><td>Material description</td><td>Table 0, column 1</td><td>"MATERIAL DESCRIPTION"</td><td>✓</td></tr>
+<tr><td>Manufacturer ID</td><td>Table 0, column 2</td><td>"MFR ID"</td><td>✓</td></tr>
+<tr><td>Vendor name</td><td>Table 0, column 3</td><td>"Name"</td><td>✓</td></tr>
+<tr><td>Country code</td><td>Table 0, column 4</td><td>"Country" (2-letter code)</td><td>✓</td></tr>
+<tr><td>Country name</td><td>Table 0, column 5</td><td>"Country" (full name)</td><td>✓</td></tr>
+</tbody>
+</table>
+
+<p>Detection rule: find <code>*.docx</code> in <code>rvl</code> section. Use <code>python-docx</code> to read tables. First table, skip header row, read until blank. Also extract MR number from filename for cross-check.</p>
+
+<h3>7.3 Compliance Sheet extraction (folder 15)</h3>
+<p>Target file: <code>*Compliance*Sheet*.xlsx</code> in the <code>notes_to_vendor</code> section. <span class="tag ta">1-sample</span></p>
+
+<table>
+<thead><tr><th>Field</th><th>Source</th><th>Cell</th><th>Validated</th></tr></thead>
+<tbody>
+<tr><td>Material name</td><td>Row 1</td><td>I1</td><td>✓</td></tr>
+<tr><td>MR number</td><td>Row 3</td><td>I3</td><td>✓</td></tr>
+<tr><td>9COM code</td><td>Row 4</td><td>I4</td><td>✓</td></tr>
+<tr><td>Section headers</td><td>Column B (e.g. "1.0", "2.0")</td><td>with section label in D</td><td>✓</td></tr>
+<tr><td>Line items</td><td>Column B (e.g. "1.1", "2.1")</td><td>description in D, requirement in G</td><td>✓</td></tr>
+</tbody>
+</table>
+
+<h3>7.4 Deviation List metadata (folder 15)</h3>
+<p>Target file: <code>*Deviation*List*.xlsx</code> in the <code>notes_to_vendor</code> section. <span class="tag ta">1-sample</span></p>
+<p>Extract only header metadata (BI number, project title, MR number, material title) from rows 7-9. Do not parse the full deviation table body for V1 — just detect its presence and row count.</p>
+
+<h3>7.5 Subcomponents List (folder 02)</h3>
+<p>Target file: <code>*Subcomponent*List*.xlsx</code> in the <code>description_bom</code> section. Presence detection only for V1. Structure is documented for future extraction.</p>
+
+<h3>7.6 Internal CRS (root file)</h3>
+<p>Target file: <code>*CRS*.xlsx</code> at root level. Presence detection only for V1. The CRS (Comment Review Sheet) contains review comments from client/contractor. Structure: columns A-I with Sr.No, Comment Reference, Reviewer, Dept, Date, Comments, Response, Response Date, Remarks.</p>
+
+<h3>7.7 Supplier Document Schedule / NMR (folder 08)</h3>
+<p>Target file: <code>*SDS*.xlsx</code> or <code>*Supp*Doc*.xlsx</code> in the <code>nmr</code> section. Presence detection and sheet enumeration only for V1. The SDS Excel has 4 sheets: Instructions, SDS, DIL, SDR Codes — all structurally rich but deferred to future extraction.</p>
+
+
+<!-- ============================================================ -->
+<!-- S8 — CROSS-CHECKS -->
+<!-- ============================================================ -->
+<h2 id="s8"><span class="n">08</span> Cross-Reference Checks</h2>
+
+<p>Same <code>CrossCheck</code> contract as the workbook parser. These checks validate internal consistency of the package.</p>
+
+<table>
+<thead><tr><th>Code</th><th>Left</th><th>Right</th><th>Type</th><th>Status</th></tr></thead>
+<tbody>
+<tr>
+  <td><code>PACKAGE_MR_vs_RVL_MR</code></td>
+  <td>Package root MR number</td>
+  <td>RVL filename MR number</td>
+  <td>exact</td>
+  <td>Active — golden ref shows MR-022 vs MR-023 mismatch</td>
+</tr>
+<tr>
+  <td><code>PACKAGE_MR_vs_BOM_MR</code></td>
+  <td>Package root MR number</td>
+  <td>BOM filename MR number</td>
+  <td>exact</td>
+  <td>Active</td>
+</tr>
+<tr>
+  <td><code>PACKAGE_MR_vs_COMPLIANCE_MR</code></td>
+  <td>Package root MR number (short)</td>
+  <td>Compliance sheet cell I3 MR number</td>
+  <td>exact</td>
+  <td>Active</td>
+</tr>
+<tr>
+  <td><code>PACKAGE_MR_vs_DEVIATION_MR</code></td>
+  <td>Package root MR number (short)</td>
+  <td>Deviation list cell D8 MR number</td>
+  <td>exact</td>
+  <td>Active</td>
+</tr>
+<tr>
+  <td><code>BOM_TAG_vs_WORKBOOK_TAG</code></td>
+  <td>BOM tag numbers</td>
+  <td>Workbook General item tags</td>
+  <td>set overlap</td>
+  <td>Deferred — requires both ZIP and workbook parsed</td>
+</tr>
+<tr>
+  <td><code>BOM_9COM_vs_RVL_9COM</code></td>
+  <td>BOM 9COM codes</td>
+  <td>RVL 9COM codes</td>
+  <td>set overlap</td>
+  <td>Active</td>
+</tr>
+<tr>
+  <td><code>BOM_9COM_vs_COMPLIANCE_9COM</code></td>
+  <td>BOM 9COM codes</td>
+  <td>Compliance sheet 9COM</td>
+  <td>exact</td>
+  <td>Active</td>
+</tr>
+<tr>
+  <td><code>SECTION_PREFIX_CONSISTENCY</code></td>
+  <td>File name prefix NN_</td>
+  <td>Parent section number</td>
+  <td>exact</td>
+  <td>Active — per-file check</td>
+</tr>
+<tr>
+  <td><code>MR_INDEX_COMPLETENESS</code></td>
+  <td>Sections with MR Index</td>
+  <td>Total numbered sections</td>
+  <td>count</td>
+  <td>Active</td>
+</tr>
+</tbody>
+</table>
+
+
+<!-- ============================================================ -->
+<!-- S9 — ARTIFACT SHAPE -->
+<!-- ============================================================ -->
+<h2 id="s9"><span class="n">09</span> Artifact Shape: Enriched <code>rfq_intake_profile</code></h2>
+
+<p>The <code>PackageParseEnvelope</code> from the parser gets consumed by <code>intake_service.py</code> to produce an enriched <code>rfq_intake_profile</code> artifact. The artifact content shape evolves from the current stub to:</p>
+
+<pre>{
+  "artifact_meta": {
+    "artifact_type": "rfq_intake_profile",
+    "slice": "rfq.created_package_parsed_v1",
+    "generated_at": "...",
+    "source_event_id": "...",
+    "source_event_type": "rfq.created",
+    "parser_version": "package-parser-v1.0"
+  },
+
+  "source_package": {
+    "references": [...],
+    "primary_reference": "...",
+    "visibility_level": "parsed",
+    "input_type": "directory|zip",
+    "package_root_name": "SA-AYPP-6-MR-022_COLLECTION VESSEL - CDS-REV-00"
+  },
+
+  "package_identity": {
+    "mr_number": "SA-AYPP-6-MR-022",
+    "mr_number_short": "MR-022",
+    "revision": "00",
+    "material_description": "COLLECTION VESSEL - CDS",
+    "project_code": "SA-AYPP-6",
+    "mr_number_mismatches": ["MR-023"]
+  },
+
+  "package_structure": {
+    "status": "parsed",
+    "total_files": 55,
+    "total_files_raw": 56,
+    "system_file_count": 1,
+    "total_folders": 22,
+    "total_size_bytes": 4120000,
+    "numbered_sections_found": 16,
+    "missing_sections": [],
+    "extra_unnumbered_sections": ["Revision History-MR Comment Log"],
+    "mr_index_coverage": "16/16",
+    "file_extension_summary": {".pdf": 48, ".xlsx": 6, ".docx": 1},
+    "section_registry": [...]
+  },
+
+  "document_understanding": {
+    "status": "partial_deterministic",
+    "summary": "Deterministic extraction from package structure, spreadsheets, and filename patterns. LLM-based document content extraction not yet implemented.",
+    "bom_profile": {...},
+    "rvl_profile": {...},
+    "standards_profile": {...},
+    "sa175_profile": {...},
+    "compliance_profile": {...},
+    "deviation_profile": {...}
+  },
+
+  "canonical_project_profile": {
+    "rfq_id": "...",
+    "rfq_code": "...",
+    "client_name": "...",
+    "project_title": "...",
+    "created_at": "...",
+    "material_description": "COLLECTION VESSEL - CDS",
+    "tag_numbers": ["K18-D-0003"],
+    "design_codes": ["ASME SECTION VIII DIV1"],
+    "nine_com_codes": ["6000002521"],
+    "location": "YANBU",
+    "vendor_count": 10,
+    "standards_count": {"samss": 9, "saes": 19, "saep": 10, "std_dwg": 5}
+  },
+
+  "field_evidence": [
+    {"field": "mr_number", "value": "SA-AYPP-6-MR-022", "source": "package_root_name", "method": "deterministic", "confidence": "high"},
+    {"field": "tag_numbers", "value": ["K18-D-0003"], "source": "02_BOM spreadsheet", "method": "deterministic", "confidence": "high"},
+    {"field": "vendor_count", "value": 10, "source": "03_RVL docx table", "method": "deterministic", "confidence": "high"},
+    {"field": "mr_number_mismatch", "value": "MR-023 in RVL vs MR-022 in package", "source": "cross_check", "method": "deterministic", "confidence": "high"}
+  ],
+
+  "quality_and_gaps": {
+    "status": "partial",
+    "known_data_points": ["package identity", "BOM line items", "RVL vendors", "standards list", "SA-175 forms", "compliance items"],
+    "gaps": ["specs/datasheet content extraction", "QAQC requirement content", "general requirement content", "scope of supply content"],
+    "review_flags": ["MR number mismatch between package and RVL"]
+  },
+
+  "downstream_readiness": {
+    "briefing_ready": true,
+    "workbook_comparison_ready": true,
+    "historical_matching_ready": false,
+    "requires_human_review": true
+  },
+
+  "parser_report_status": "parsed_ok"
+}</pre>
+
+
+<!-- ============================================================ -->
+<!-- S10 — INTEGRATION -->
+<!-- ============================================================ -->
+<h2 id="s10"><span class="n">10</span> Integration with Existing Code</h2>
+
+<h3>10.1 <code>intake_service.py</code> changes</h3>
+<p>The current <code>build_intake_profile_from_rfq_created()</code> method produces a stub. After this blueprint is implemented:</p>
+<ul>
+  <li>When a package path is available: call <code>PackageParserOrchestrator.parse()</code> → build enriched artifact</li>
+  <li>When no package path is available (manager doesn't provide one yet): fall back to current stub behavior</li>
+  <li>The method signature doesn't change — it still receives <code>rfq_context</code> and <code>event_meta</code></li>
+</ul>
+
+<h3>10.2 <code>briefing_service.py</code> changes</h3>
+<p>The current <code>build_briefing_from_intake()</code> reads intake content and produces a stub briefing. After this blueprint, the briefing becomes a <strong>deterministic-enriched v1</strong> — populated from structure, filenames, spreadsheet data, and cross-checks. It does not yet include semantic document understanding (QAQC content, specs analysis, etc. — those require LLM and are deferred).</p>
+<ul>
+  <li>When intake has <code>"status": "parsed"</code> in <code>package_structure</code>: enrich briefing with deterministic data (standards count, vendor list summary, BOM summary, review flags from cross-checks)</li>
+  <li>When intake has <code>"status": "limited"</code>: keep current stub behavior</li>
+  <li>The briefing's <code>what_is_known</code> section expands to include package-derived fields</li>
+  <li>The briefing's <code>compliance_flags_or_placeholders</code> section activates with real standards data</li>
+</ul>
+
+<h3>10.3 <code>ManagerConnector</code> changes</h3>
+<p>Add <code>fetch_package_local_path(package_ref: str) -> Path</code> — same pattern as <code>fetch_workbook_local_path()</code>. In cold-start V1, resolves to a local fixtures directory.</p>
+
+<h3>10.4 <code>app_context.py</code> changes</h3>
+<p>Add <code>get_package_parser_orchestrator() -> PackageParserOrchestrator</code> provider. Wire into <code>get_intake_service()</code> if direct injection is needed, or keep it as a direct instantiation inside <code>intake_service</code> (same pattern as <code>workbook_service</code> calling <code>parse_workbook_deterministic()</code>).</p>
+
+<h3>10.5 Dependencies</h3>
+<p>New Python dependencies required:</p>
+<ul>
+  <li><code>openpyxl</code> — for reading <code>.xlsx</code> files (BOM, Compliance, Deviation List, SDS)</li>
+  <li><code>python-docx</code> — for reading RVL <code>.docx</code> files</li>
+</ul>
+<p>Both are pure Python, no system dependencies. Add to <code>requirements.txt</code>.</p>
+
+<h3>10.6 Event flow (unchanged)</h3>
+<pre>rfq.created event
+  → LifecycleHandlers.handle_rfq_created()
+    → intake_service.get_rfq_context()           # existing
+    → intake_service.get_package_path()           # NEW: resolve package local path
+    → PackageParserOrchestrator.parse()           # NEW: deterministic parsing
+    → intake_service.build_intake_profile()       # MODIFIED: use envelope data
+    → briefing_service.build_briefing()           # MODIFIED: deterministic-enriched v1 from intake data
+    → analytical_record_service.build_initial()   # existing
+    → snapshot_service.rebuild_snapshot()          # existing</pre>
+
+
+<!-- ============================================================ -->
+<!-- S11 — SCOPE BOUNDARY -->
+<!-- ============================================================ -->
+<h2 id="s11"><span class="n">11</span> Scope Boundary</h2>
+
+<div class="g3">
+  <div class="card" style="border-top:3px solid var(--green);">
+    <div class="card-t" style="color:var(--green);">V1 — Implement Now</div>
+    <p>Package scan (tree walk). Section recognition (number prefix + name heuristic). Identity extraction (root name regex). Standards detection (filename regex). BOM extraction (openpyxl). RVL extraction (python-docx). SA-175 form detection. Compliance sheet extraction. Deviation list metadata. Cross-reference checks. Enriched <code>rfq_intake_profile</code> artifact. Deterministic-enriched <code>intelligence_briefing</code> v1 (structure/filenames/spreadsheets/cross-checks — not document semantics).</p>
+  </div>
+  <div class="card" style="border-top:3px solid var(--amber);">
+    <div class="card-t" style="color:var(--amber);">V1.1 — Architecture Ready, Deferred</div>
+    <p>Subcomponents List extraction. SDS/NMR schedule extraction. Internal CRS extraction. Scope of Supply PDF text extraction. MR Index PDF table parsing. Packing spec MS-8314 classification. BOM-vs-workbook tag cross-check (requires both lanes parsed).</p>
+  </div>
+  <div class="card" style="border-top:3px solid var(--red);">
+    <div class="card-t" style="color:var(--red);">Future — Requires LLM / Azure AI</div>
+    <p>QAQC requirement content extraction. General requirement content extraction. Vendor document requirement content extraction. Specs/datasheet semantic analysis. Scope of supply semantic understanding. PWHT / U-Stamp / RT detection from document content. Compliance risk scoring. Supplier intelligence enrichment from RVL + historical data.</p>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- S12 — FILE TREE -->
+<!-- ============================================================ -->
+<h2 id="s12"><span class="n">12</span> New Files &amp; Modified Files</h2>
+
+<div class="tree"><span class="dir">src/services/package_parser/</span>           <span class="note">← NEW module (parallel to workbook_parser/)</span>
+├── <span class="new">__init__.py</span>                              <span class="note">← module init + parse_package_deterministic()</span>
+├── <span class="new">parser_orchestrator.py</span>                   <span class="note">← 4-stage pipeline coordinator</span>
+├── <span class="new">assembler.py</span>                             <span class="note">← build_envelope() for PackageParseEnvelope</span>
+├── <span class="new">contracts.py</span>                             <span class="note">← all @dataclass(frozen=True) contracts from §04</span>
+├── <span class="new">issues.py</span>                                <span class="note">← package-specific issue codes + StageReport</span>
+├── <span class="new">cross_checks.py</span>                          <span class="note">← all cross-reference checks from §08</span>
+├── <span class="new">normalizers.py</span>                           <span class="note">← path normalization, name cleaning</span>
+├── <span class="dir">scanners/</span>
+│   ├── <span class="new">tree_scanner.py</span>                      <span class="note">← os.walk → PackageInventory</span>
+│   └── <span class="new">zip_scanner.py</span>                       <span class="note">← zipfile extract → tree_scanner</span>
+└── <span class="dir">extractors/</span>
+    ├── <span class="new">identity_extractor.py</span>                <span class="note">← root name → PackageIdentity</span>
+    ├── <span class="new">section_classifier.py</span>                <span class="note">← folders → SectionRegistry</span>
+    ├── <span class="new">standards_extractor.py</span>               <span class="note">← folder 06 → StandardsProfile</span>
+    ├── <span class="new">bom_extractor.py</span>                     <span class="note">← folder 02 BOM xlsx → BomProfile</span>
+    ├── <span class="new">rvl_extractor.py</span>                     <span class="note">← folder 03 RVL docx → RvlProfile</span>
+    ├── <span class="new">compliance_extractor.py</span>              <span class="note">← folder 15 compliance xlsx → ComplianceProfile</span>
+    └── <span class="new">sa175_extractor.py</span>                   <span class="note">← folder 07 → Sa175Profile</span>
+
+<span class="touch">src/services/intake_service.py</span>               <span class="note">← MODIFIED: call package_parser, build enriched artifact</span>
+<span class="touch">src/services/briefing_service.py</span>             <span class="note">← MODIFIED: consume enriched intake for deterministic-enriched briefing v1</span>
+<span class="touch">src/connectors/manager_connector.py</span>          <span class="note">← MODIFIED: add fetch_package_local_path()</span>
+<span class="touch">requirements.txt</span>                             <span class="note">← MODIFIED: add openpyxl, python-docx</span>
+</div>
+
+<p><strong>Total: 16 new files, 4 modified files.</strong></p>
+
+<div class="cb c-purple"><div class="ct">Next step</div>
+This implementation pack defines the "what." Once reviewed and frozen, the companion <code>mr_package_intelligence_blueprint_v1.0.html</code> will define the "how" — every file to create, module structure, implementation sequence, test expectations, and Postman scenarios for validation. Same discipline as the workbook parser specs.</div>
+
+</div>
+</body>
+</html>
