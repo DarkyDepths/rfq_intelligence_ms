@@ -45,3 +45,8 @@ Context/
 
 # ── Local fixtures ────────────────────────────────
 local_fixtures/
+
+# ── Local debug / visualization outputs ───────────
+tmp/
+dump_xls.py
+xls_dump.txt
