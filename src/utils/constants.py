@@ -12,7 +12,8 @@ Current status: COMPLETE for skeleton.
 """
 
 # ── Artifact Types ────────────────────────────────────
-# The 6 V1 intelligence artifacts persisted and served by this service.
+# 6 core intelligence artifacts + 2 parser support artifacts used in
+# workbook.uploaded flow (cost_breakdown_profile, parser_report).
 ARTIFACT_TYPES = [
     "rfq_intake_profile",
     "intelligence_briefing",

@@ -24,7 +24,7 @@ A separate, read-heavy analytical microservice that transforms RFQ source materi
 
 ---
 
-## The 6 Intelligence Artifacts
+## Core Intelligence Artifacts (6)
 
 | # | Artifact | Role |
 |---|----------|------|
@@ -34,6 +34,15 @@ A separate, read-heavy analytical microservice that transforms RFQ source materi
 | 4 | `workbook_review_report` | Bridge artifact comparing intake vs workbook |
 | 5 | `rfq_intelligence_snapshot` | Consumer-facing read model per RFQ |
 | 6 | `rfq_analytical_record` | Historical enrichment seed (not user-facing) |
+
+---
+
+## Parser Support Artifacts (2)
+
+| # | Artifact | Role |
+|---|----------|------|
+| 7 | `cost_breakdown_profile` | Cost decomposition emitted from deterministic workbook parser |
+| 8 | `parser_report` | Parser execution/report metadata for workbook parsing |
 
 ---
 

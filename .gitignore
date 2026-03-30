@@ -36,6 +36,7 @@ migrations/__pycache__/
 
 # ── Logs ──────────────────────────────────────────
 *.log
+error_log.txt
 
 # ── Antigravity / Gemini ──────────────────────────
 .gemini/

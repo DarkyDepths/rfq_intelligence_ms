@@ -146,19 +146,34 @@ def _find_next_grand_total_row(reader: WorkbookReader, start_row: int) -> int | 
 
 
 def _grand_total_match(grand_total: BoqGrandTotal, computed_total: BoqGrandTotal) -> bool | None:
+    def _weight_matches(left: float, right: float) -> bool:
+        # Some workbooks report GRAND TOTAL weights in tons while component
+        # rows are aggregated in kg. Accept either representation.
+        if abs(left - right) <= 1e-6:
+            return True
+        if abs((left * 1000.0) - right) <= 1e-3:
+            return True
+        if abs(left - (right * 1000.0)) <= 1e-3:
+            return True
+        return False
+
     pairs = (
-        (grand_total.finish_weight_kg, computed_total.finish_weight_kg),
-        (grand_total.procured_weight_kg, computed_total.procured_weight_kg),
-        (grand_total.total_amount_sr, computed_total.total_amount_sr),
+        (grand_total.finish_weight_kg, computed_total.finish_weight_kg, "weight"),
+        (grand_total.procured_weight_kg, computed_total.procured_weight_kg, "weight"),
+        (grand_total.total_amount_sr, computed_total.total_amount_sr, "amount"),
     )
 
     compared = False
-    for left, right in pairs:
+    for left, right, kind in pairs:
         if left is None or right is None:
             continue
         compared = True
-        if abs(left - right) > 1e-6:
-            return False
+        if kind == "weight":
+            if not _weight_matches(left, right):
+                return False
+        else:
+            if abs(left - right) > 1e-6:
+                return False
 
     if not compared:
         return None

@@ -123,7 +123,7 @@ def test_boq_extractor_extracts_populated_block_and_price_table_from_fixture():
     assert item.grand_total.total_amount_sr == pytest.approx(202293.23814702753)
     assert item.computed_total.total_amount_sr == pytest.approx(202293.23814702753)
     assert item.computed_total.finish_weight_kg == pytest.approx(10249.474758574539)
-    assert item.grand_total_vs_computed_match is False
+    assert item.grand_total_vs_computed_match is True
 
     assert len(result.material_price_table) >= 20
     assert result.material_price_table[0].sheet_row == 2191
@@ -148,7 +148,7 @@ def test_boq_extractor_handles_formula_error_like_grand_total_cells_without_cras
     item = result.boq_item_details[0]
     assert item.grand_total.total_amount_sr is None
     assert item.computed_total.total_amount_sr == pytest.approx(202293.23814702753)
-    assert item.grand_total_vs_computed_match is False
+    assert item.grand_total_vs_computed_match is True
 
 
 def test_boq_extractor_population_is_not_dependent_on_grand_total_row():
