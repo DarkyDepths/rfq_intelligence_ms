@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MR Package Intelligence — Implementation Blueprint v1.0</title>
+<style>
+  :root{--bg:#0b0f14;--surface:#141a22;--surface-2:#1a2230;--border:#2a3545;--ink:#e8edf4;--ink-2:#bcc5d2;--ink-3:#8895a7;--ink-4:#5e6b7d;--blue:#5b9cf5;--blue-dim:#5b9cf520;--green:#4eca7a;--green-dim:#4eca7a20;--amber:#e0a83a;--amber-dim:#e0a83a20;--red:#ef6461;--red-dim:#ef646120;--purple:#b48eff;--purple-dim:#b48eff18;--cyan:#56d4c8;--cyan-dim:#56d4c818;--mono:'JetBrains Mono','Fira Code','SF Mono',Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink-2);font-size:14.5px;line-height:1.7}
+  .w{max-width:1020px;margin:0 auto;padding:48px 28px 120px}
+  nav{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 28px;margin:0 -28px 40px;overflow-x:auto;white-space:nowrap}
+  nav a{color:var(--ink-3);text-decoration:none;font-size:12px;font-weight:500;letter-spacing:.3px;margin-right:16px;transition:color .15s}nav a:hover{color:var(--blue)}
+  h1{font-size:26px;font-weight:700;color:var(--ink);margin-bottom:6px;letter-spacing:-.5px}
+  .sub{color:var(--ink-3);font-size:13.5px;margin-bottom:36px}.sub code{background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--ink-2)}
+  h2{font-size:19px;font-weight:600;color:var(--ink);margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h3{font-size:15px;font-weight:600;color:var(--ink);margin:24px 0 10px}h4{font-size:14px;font-weight:600;color:var(--ink-2);margin:14px 0 6px}
+  .n{display:inline-block;width:32px;color:var(--blue);font-weight:700;font-size:14px}
+  code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:2px 5px;border-radius:3px;color:var(--cyan)}
+  pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;font-size:12px;line-height:1.55;color:var(--ink-2);margin:12px 0;font-family:var(--mono)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+  th{background:var(--surface-2);color:var(--ink);font-weight:600;text-align:left;padding:8px 10px;border:1px solid var(--border)}
+  td{padding:6px 10px;border:1px solid var(--border);vertical-align:top}
+  .cb{border-radius:8px;padding:16px 20px;margin:16px 0}.ct{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .c-blue{background:var(--blue-dim);border-left:3px solid var(--blue)}.c-blue .ct{color:var(--blue)}
+  .c-green{background:var(--green-dim);border-left:3px solid var(--green)}.c-green .ct{color:var(--green)}
+  .c-amber{background:var(--amber-dim);border-left:3px solid var(--amber)}.c-amber .ct{color:var(--amber)}
+  .c-red{background:var(--red-dim);border-left:3px solid var(--red)}.c-red .ct{color:var(--red)}
+  .c-purple{background:var(--purple-dim);border-left:3px solid var(--purple)}.c-purple .ct{color:var(--purple)}
+  .c-cyan{background:var(--cyan-dim);border-left:3px solid var(--cyan)}.c-cyan .ct{color:var(--cyan)}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:3px;letter-spacing:.3px;vertical-align:middle}
+  .tg{background:var(--green-dim);color:var(--green)}.ta{background:var(--amber-dim);color:var(--amber)}.tr{background:var(--red-dim);color:var(--red)}.tb{background:var(--blue-dim);color:var(--blue)}.tp{background:var(--purple-dim);color:var(--purple)}
+  ul{margin:8px 0 12px 20px}li{margin-bottom:4px}
+  .tree{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 24px;font-family:var(--mono);font-size:12.5px;line-height:1.8;white-space:pre;overflow-x:auto;margin:12px 0}
+  .tree .dir{color:var(--blue);font-weight:600}.tree .new{color:var(--green);font-weight:500}.tree .touch{color:var(--amber);font-weight:500}.tree .note{color:var(--ink-4);font-style:italic}
+  .phase{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:12px 0}
+  .phase-num{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--purple);margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="w">
+
+<nav>
+  <a href="#s1">Context</a>
+  <a href="#s2">Tree</a>
+  <a href="#s3">Scanners</a>
+  <a href="#s4">Extractors</a>
+  <a href="#s5">SoftFail</a>
+  <a href="#s6">Orchestrator</a>
+  <a href="#s7">Assembler</a>
+  <a href="#s8">CrossChecks</a>
+  <a href="#s9">ServiceWiring</a>
+  <a href="#s10">Tests</a>
+  <a href="#s11">Sequence</a>
+</nav>
+
+<h1>MR Package Intelligence &mdash; Implementation Blueprint v1.0</h1>
+<p class="sub">
+  Service: <code>rfq_intelligence_ms</code> &nbsp;|&nbsp; Module: <code>src/services/package_parser/</code><br>
+  Schema: <code>Implementation Pack v1.0</code> (frozen source of truth for all contracts)<br>
+  Verified against: <code>github.com/DarkyDepths/rfq_intelligence_ms</code> @ main
+</p>
+
+<div class="cb c-blue"><div class="ct">What this blueprint defines &mdash; the &ldquo;how&rdquo;</div>
+Every file to create or modify, every class and function responsibility, the exact data flow from package input to <code>PackageParseEnvelope</code> output, and the phased implementation sequence. All contracts, schemas, detection rules, and canonical section definitions are frozen in the <strong>Implementation Pack v1.0</strong> &mdash; this blueprint does not redefine them. It maps <strong>how</strong> to build the code that produces them.<br><br>
+<strong>Convention note:</strong> This follows the established repo convention. Implementation Pack = the &ldquo;what&rdquo; (contracts, schemas, frozen shapes). Implementation Blueprint = the &ldquo;how&rdquo; (files to create, module structure, implementation sequence). Same convention as <code>workbook_parser_implementation_pack_v*.html</code> / <code>workbook_parser_blueprint_v*.html</code>.</div>
+
+<div class="cb c-red"><div class="ct">Critical boundary &mdash; internal envelope vs persisted artifacts</div>
+<code>PackageParseEnvelope</code> is an internal parser output &mdash; never persisted as its own artifact. <code>PackageInventory</code> and <code>SectionRegistry</code> are intermediate processing structures inside the envelope. Persisted artifacts remain exactly two: <code>rfq_intake_profile</code> and <code>intelligence_briefing</code>. The <code>intake_service</code> consumes the envelope. The <code>briefing_service</code> consumes the enriched intake. No new artifact types are introduced.</div>
+
+<h2 id="s1"><span class="n">01</span> Context</h2>
+
+<h3>1.1 Current flow</h3>
+<pre>LifecycleHandlers.handle_rfq_created()
+  &rarr; intake_service.get_rfq_context()          # fetches minimal manager context
+  &rarr; intake_service.build_intake_profile()     # produces STUB rfq_intake_profile
+  &rarr; briefing_service.build_briefing()         # produces STUB intelligence_briefing
+  &rarr; analytical_record_service.build_initial() # creates analytical record
+  &rarr; snapshot_service.rebuild_snapshot()       # updates snapshot</pre>
+
+<h3>1.2 After this blueprint</h3>
+<pre>LifecycleHandlers.handle_rfq_created()
+  &rarr; intake_service.get_rfq_context()              # unchanged
+  &rarr; manager_connector.fetch_package_local_path()   # NEW: resolve package path
+  &rarr; PackageParserOrchestrator.parse()              # NEW: 4-stage deterministic pipeline
+  &rarr; intake_service.build_intake_profile()          # MODIFIED: use PackageParseEnvelope
+  &rarr; briefing_service.build_briefing()              # MODIFIED: deterministic-enriched v1
+  &rarr; analytical_record_service.build_initial()      # unchanged
+  &rarr; snapshot_service.rebuild_snapshot()            # unchanged</pre>
+
+<p>When no package path is available (manager doesn&rsquo;t provide one), the flow falls back to the existing stub behavior. No breakage.</p>
+
+<h3>1.3 Briefing scope</h3>
+<div class="cb c-amber"><div class="ct">Deterministic-enriched v1 only</div>
+The enriched briefing is based on structure, filenames, spreadsheets, and cross-checks extracted by the package parser. It does <strong>not</strong> include semantic document understanding (QAQC content, specs analysis, scope interpretation). Those require LLM and are deferred. The briefing&rsquo;s <code>artifact_meta.slice</code> = <code>&ldquo;rfq.created_deterministic_enriched_v1&rdquo;</code>.</div>
+
+<h2 id="s2"><span class="n">02</span> File Tree</h2>
+
+<div class="cb c-green"><div class="ct">16 new files, 9 test files, 4 modified files</div>
+All new files live in <code>src/services/package_parser/</code>. Modified files are existing service-layer and infrastructure files. No new BACAB route/controller/datasource files &mdash; the parser is consumed internally by <code>intake_service</code>.</div>
+
+<div class="tree"><span class="dir">src/services/package_parser/</span>             <span class="note">&larr; NEW module</span>
+&boxvr;&boxh; <span class="new">__init__.py</span>                              <span class="note"># module init + parse_package_deterministic() entrypoint</span>
+&boxvr;&boxh; <span class="new">parser_orchestrator.py</span>                   <span class="note"># PackageParserOrchestrator: 4-stage pipeline</span>
+&boxvr;&boxh; <span class="new">assembler.py</span>                             <span class="note"># build_envelope() &rarr; PackageParseEnvelope dict</span>
+&boxvr;&boxh; <span class="new">contracts.py</span>                             <span class="note"># all @dataclass(frozen=True) from Pack v1.0 &sect;04</span>
+&boxvr;&boxh; <span class="new">issues.py</span>                                <span class="note"># PackageParserStatus, StageName, StageReport</span>
+&boxvr;&boxh; <span class="new">cross_checks.py</span>                          <span class="note"># all cross-checks from Pack v1.0 &sect;08</span>
+&boxvr;&boxh; <span class="new">normalizers.py</span>                           <span class="note"># path normalization, system file detection</span>
+&boxvr;&boxh; <span class="dir">scanners/</span>
+&boxv;   &boxvr;&boxh; <span class="new">tree_scanner.py</span>                      <span class="note"># Stage A: os.walk &rarr; PackageInventory</span>
+&boxv;   &boxur;&boxh; <span class="new">zip_scanner.py</span>                       <span class="note"># ZIP input: extract &rarr; delegate to tree_scanner</span>
+&boxur;&boxh; <span class="dir">extractors/</span>
+    &boxvr;&boxh; <span class="new">identity_extractor.py</span>                <span class="note"># root name regex &rarr; PackageIdentity</span>
+    &boxvr;&boxh; <span class="new">section_classifier.py</span>                <span class="note"># folders &rarr; SectionRegistry (Stage B)</span>
+    &boxvr;&boxh; <span class="new">standards_extractor.py</span>               <span class="note"># folder 06 filenames &rarr; StandardsProfile</span>
+    &boxvr;&boxh; <span class="new">bom_extractor.py</span>                     <span class="note"># folder 02 BOM xlsx &rarr; BomProfile (openpyxl)</span>
+    &boxvr;&boxh; <span class="new">rvl_extractor.py</span>                     <span class="note"># folder 03 RVL docx &rarr; RvlProfile (python-docx)</span>
+    &boxvr;&boxh; <span class="new">compliance_extractor.py</span>              <span class="note"># folder 15 xlsx &rarr; ComplianceProfile + DeviationProfile</span>
+    &boxur;&boxh; <span class="new">sa175_extractor.py</span>                   <span class="note"># folder 07 filenames &rarr; Sa175Profile</span>
+
+<span class="dir">tests/package_parser/</span>                        <span class="note">&larr; NEW test directory</span>
+&boxvr;&boxh; <span class="new">test_tree_scanner.py</span>
+&boxvr;&boxh; <span class="new">test_identity_extractor.py</span>
+&boxvr;&boxh; <span class="new">test_section_classifier.py</span>
+&boxvr;&boxh; <span class="new">test_standards_extractor.py</span>
+&boxvr;&boxh; <span class="new">test_bom_extractor.py</span>
+&boxvr;&boxh; <span class="new">test_rvl_extractor.py</span>
+&boxvr;&boxh; <span class="new">test_compliance_extractor.py</span>
+&boxvr;&boxh; <span class="new">test_cross_checks.py</span>
+&boxur;&boxh; <span class="new">test_parser_orchestrator_e2e.py</span>
+
+<span class="touch">src/services/intake_service.py</span>               <span class="note">&larr; MODIFIED: call package_parser, build enriched artifact</span>
+<span class="touch">src/services/briefing_service.py</span>             <span class="note">&larr; MODIFIED: deterministic-enriched v1 from intake data</span>
+<span class="touch">src/connectors/manager_connector.py</span>          <span class="note">&larr; MODIFIED: add fetch_package_local_path()</span>
+<span class="touch">requirements.txt</span>                             <span class="note">&larr; MODIFIED: add openpyxl, python-docx</span>
+</div>
+
+<h2 id="s3"><span class="n">03</span> Scanners &mdash; Stage A</h2>
+
+<h3>3.1 <code>normalizers.py</code> &mdash; system file detection</h3>
+<p>Count semantics from Pack v1.0 &sect;04: all count fields (<code>total_files</code>, <code>FolderEntry.file_count</code>, <code>file_extension_counts</code>) are <strong>business counts</strong> excluding system files. <code>files[]</code> list includes everything (raw truth). <code>total_files_raw</code> = <code>len(files)</code>. <code>system_file_count</code> tallied separately. <code>root_files</code> excludes system files.</p>
+<pre>SYSTEM_FILE_PATTERNS = {".ds_store", "thumbs.db", ".gitkeep", "desktop.ini"}
+SYSTEM_DIR_PATTERNS = {"__macosx"}
+
+def is_system_file(filename: str) -&gt; bool:
+    return filename.lower() in SYSTEM_FILE_PATTERNS
+
+def is_system_dir(dirname: str) -&gt; bool:
+    return dirname.lower() in SYSTEM_DIR_PATTERNS</pre>
+
+<h3>3.2 <code>tree_scanner.py</code></h3>
+<pre>class TreeScanner:
+    def scan(self, root_path: Path) -&gt; PackageInventory:
+        """Stage A: Walk filesystem &rarr; PackageInventory.
+
+        Per file:
+        - is_system_file via normalizers.is_system_file()
+        - is_mr_index via MR Index regex (Pack &sect;06.3)
+        - mr_number_in_filename via MR-NNN regex (Pack &sect;06.5)
+        - section_prefix via NN_ prefix regex (Pack &sect;06.4)
+        - root_role for depth=0 non-system files (Pack &sect;04.1):
+            "mr_index_root" | "internal_review_file" | "unclassified_root_extra"
+
+        Per folder:
+        - number_prefix via NN- regex (Pack &sect;06.2)
+        - file_count = business count (excludes system files)
+
+        PackageInventory:
+        - total_files = business count
+        - total_files_raw = all files including system
+        - root_files = depth 0, excludes system files
+        - file_extension_counts = business counts
+        - system_file_count = count of system files
+        """</pre>
+
+<h3>3.3 <code>zip_scanner.py</code></h3>
+<pre>class ZipScanner:
+    def scan(self, zip_path: Path) -&gt; PackageInventory:
+        """Extract ZIP to temp dir, delegate to TreeScanner.
+        1. zipfile.ZipFile(zip_path).extractall(temp_dir)
+        2. If single child folder &rarr; use as root
+        3. tree_scanner.scan(root_path)
+        4. Set input_type="zip"
+        5. Cleanup temp dir
+        """</pre>
+
+<h2 id="s4"><span class="n">04</span> Extractors &mdash; Stage B + Stage C</h2>
+
+<p>Each extractor receives <code>PackageInventory</code> + <code>SectionRegistry</code> and returns its typed result dataclass. All contracts frozen in Pack v1.0 &sect;04. All detection rules frozen in Pack v1.0 &sect;06&ndash;07.</p>
+
+<h3>4.1 <code>identity_extractor.py</code> &mdash; Stage B</h3>
+<pre>class IdentityExtractor:
+    def extract(self, inventory: PackageInventory) -&gt; PackageIdentity:
+        """Regex from Pack &sect;06.1 on inventory.package_root_name.
+        Also scan all FileEntry.mr_number_in_filename &rarr; collect mismatches."""</pre>
+
+<h3>4.2 <code>section_classifier.py</code> &mdash; Stage B</h3>
+<pre>class SectionClassifier:
+    def classify(self, inventory: PackageInventory) -&gt; SectionRegistry:
+        """1. Number prefix &rarr; match_method="number_prefix", confidence="high"
+        2. Name heuristic via ALIAS_MAP (Pack &sect;05.1) &rarr; confidence="medium"
+        3. No match &rarr; unmatched_folders
+        Compute: missing_canonical_sections, mr_index_present per section."""</pre>
+
+<h3>4.3 <code>standards_extractor.py</code> &mdash; Stage C</h3>
+<pre>class StandardsExtractor:
+    def extract(self, inventory, registry) -&gt; StandardsProfile | None:
+        """Find "applicable_standards" section. Walk files + subfolders.
+        Apply regexes from Pack &sect;06.6. Detect subfolder families from Pack &sect;06.7."""</pre>
+
+<h3>4.4 <code>bom_extractor.py</code> &mdash; Stage C</h3>
+<pre>class BomExtractor:
+    def extract(self, inventory, registry) -&gt; BomProfile | None:
+        """Find *BOM*.xlsx in "description_bom" section. openpyxl read_only.
+        Column map from Pack &sect;07.1. Collect tags, 9COMs, design codes, locations."""</pre>
+
+<h3>4.5 <code>rvl_extractor.py</code> &mdash; Stage C</h3>
+<pre>class RvlExtractor:
+    def extract(self, inventory, registry) -&gt; RvlProfile | None:
+        """Prefer .docx in "rvl" section. python-docx table 0.
+        Column map from Pack &sect;07.2. Extract MR number from filename for cross-check."""</pre>
+
+<h3>4.6 <code>compliance_extractor.py</code> &mdash; Stage C</h3>
+<pre>class ComplianceExtractor:
+    def extract(self, inventory, registry) -&gt; tuple[ComplianceProfile | None, DeviationProfile | None]:
+        """Compliance Sheet: *Compliance*Sheet*.xlsx, Pack &sect;07.3.
+        Deviation List: *Deviation*List*.xlsx, Pack &sect;07.4 (header metadata only)."""</pre>
+
+<h3>4.7 <code>sa175_extractor.py</code> &mdash; Stage C</h3>
+<pre>class Sa175Extractor:
+    def extract(self, inventory, registry) -&gt; Sa175Profile | None:
+        """Find "sa175_forms" section. Regex from Pack &sect;06.6: r'175[-_](\d{6})'"""</pre>
+
+<h2 id="s5"><span class="n">05</span> Soft-Fail Contract &mdash; Three Distinct Outcomes</h2>
+
+<div class="cb c-red"><div class="ct">Same pattern as workbook parser _try_extract</div>
+<strong>None</strong> = section absent &rarr; extractor not called, envelope field is <code>None</code>.<br>
+<strong>Failed result</strong> = section present but extractor crashed &rarr; error issue captured, envelope field is <code>None</code>, error in <code>parser_report.errors</code>.<br>
+<strong>Success result</strong> = normal extraction &rarr; data assembled into envelope.</div>
+
+<pre>def _try_extract(self, canonical_key, extractor, inventory, registry):
+    section = self._find_section(registry, canonical_key)
+    if section is None:
+        return None
+    try:
+        return extractor.extract(inventory, registry)
+    except Exception as exc:
+        logger.error("Extraction failed for '%s': %s", canonical_key, exc)
+        return _make_failed_issue(canonical_key, exc)</pre>
+
+<h2 id="s6"><span class="n">06</span> Orchestrator &mdash; <code>parser_orchestrator.py</code></h2>
+
+<pre>PARSER_VERSION = "package-parser-v1.0"
+
+class PackageParserOrchestrator:
+    def parse(self, package_path: str, rfq_id: str) -&gt; dict:
+        path = Path(package_path)
+
+        # Stage A: Package Scan
+        if path.suffix.lower() == ".zip":
+            inventory = ZipScanner().scan(path)
+        elif path.is_dir():
+            inventory = TreeScanner().scan(path)
+        else:
+            raise ValueError(f"Unsupported input: {package_path}")
+
+        # Stage B: Structure Recognition
+        identity = IdentityExtractor().extract(inventory)
+        registry = SectionClassifier().classify(inventory)
+
+        # Stage C: Targeted Extraction
+        standards   = _try_extract("applicable_standards", StandardsExtractor(), ...)
+        bom         = _try_extract("description_bom", BomExtractor(), ...)
+        rvl         = _try_extract("rvl", RvlExtractor(), ...)
+        sa175       = _try_extract("sa175_forms", Sa175Extractor(), ...)
+        compliance, deviation = _try_extract_compliance(...)
+
+        # Cross-checks (Pack &sect;08)
+        cross_checks = run_cross_checks(identity, bom, rvl, compliance, deviation, registry, inventory)
+
+        # Stage D: Assembly
+        return build_envelope(rfq_id, inventory, identity, registry,
+                              standards, bom, rvl, sa175, compliance, deviation, cross_checks)</pre>
+
+<h2 id="s7"><span class="n">07</span> Assembler &mdash; <code>build_envelope()</code></h2>
+<pre>def build_envelope(...) -&gt; dict:
+    """Same pattern as workbook assembler:
+    1. Collect issues from all extractors
+    2. Compute overall status (parsed_ok / parsed_with_warnings / failed)
+    3. Build StageReport per stage
+    4. Assemble PackageParseEnvelope (Pack &sect;04.11)
+    5. Return dataclasses.asdict(envelope)
+
+    input_path is set to None (do not persist local paths)."""</pre>
+
+<h2 id="s8"><span class="n">08</span> Cross-Checks &mdash; <code>cross_checks.py</code></h2>
+<p>All 9 checks from Pack v1.0 &sect;08. Reuses <code>CrossCheck</code> dataclass from <code>workbook_parser/issues.py</code>. Adds <code>_set_overlap_check</code> for 9COM set intersection. Adds <code>_mr_index_completeness_check</code> for count-based check.</p>
+
+<pre>def run_cross_checks(identity, bom_profile, rvl_profile,
+                     compliance_profile, deviation_profile,
+                     registry, inventory) -&gt; list[CrossCheck]:
+    checks = []
+    # PACKAGE_MR_vs_RVL_MR, PACKAGE_MR_vs_BOM_MR,
+    # PACKAGE_MR_vs_COMPLIANCE_MR, PACKAGE_MR_vs_DEVIATION_MR   (exact)
+    # BOM_9COM_vs_RVL_9COM, BOM_9COM_vs_COMPLIANCE_9COM         (set/exact)
+    # SECTION_PREFIX_CONSISTENCY                                 (per-file)
+    # MR_INDEX_COMPLETENESS                                      (count)
+    return checks</pre>
+
+<h2 id="s9"><span class="n">09</span> Service Wiring</h2>
+
+<h3>9.1 <code>manager_connector.py</code></h3>
+<pre>def fetch_package_local_path(self, package_ref: str) -&gt; Path:
+    """Same pattern as fetch_workbook_local_path().
+    V1: local_fixtures/package_uploaded/&lt;sample&gt;/
+    Production: Azure Blob download &rarr; temp path."""</pre>
+
+<h3>9.2 <code>intake_service.py</code></h3>
+<pre>def build_intake_profile_from_rfq_created(self, rfq_context, event_meta, commit=True):
+    """If package path available:
+       - PackageParserOrchestrator().parse() &rarr; envelope
+       - Build enriched content (Pack &sect;09 shape)
+       - slice = "rfq.created_package_parsed_v1"
+       - status = complete|partial|failed based on parser_report.status
+    If no package path:
+       - Keep existing stub behavior
+       - slice = "rfq.created_vertical_slice_v1"
+       - status = "partial"
+    """</pre>
+
+<h3>9.3 <code>briefing_service.py</code></h3>
+<pre>def build_briefing_from_intake(self, intake_artifact, event_meta, commit=True):
+    """If package_structure.status == "parsed":
+       - what_is_known: mr_number, tags, design_codes, vendor_count, standards_counts
+       - compliance_flags: standards families, SA-175 count, review flags
+       - section_availability.document_understanding = "partial_deterministic"
+       - slice = "rfq.created_deterministic_enriched_v1"
+    Else: keep existing stub behavior."""</pre>
+
+<h3>9.4 <code>requirements.txt</code></h3>
+<pre>openpyxl==3.1.5
+python-docx==1.1.2</pre>
+
+<h2 id="s10"><span class="n">10</span> Tests</h2>
+
+<h3>10.1 Golden reference fixture</h3>
+<p><code>SA-AYPP-6-MR-022</code> placed in <code>tests/package_parser/fixtures/</code>.</p>
+
+<h3>10.2 Unit tests</h3>
+<table>
+<thead><tr><th>File</th><th>Key assertions (golden reference)</th></tr></thead>
+<tbody>
+<tr><td><code>test_tree_scanner.py</code></td><td>total_files=55 (business). total_files_raw=56. system_file_count=1. root_files has 2 entries. root_files[0].root_role=&ldquo;mr_index_root&rdquo;. root_files[1].root_role=&ldquo;internal_review_file&rdquo;.</td></tr>
+<tr><td><code>test_identity_extractor.py</code></td><td>mr_number=&ldquo;SA-AYPP-6-MR-022&rdquo;. revision=&ldquo;00&rdquo;. material_description=&ldquo;COLLECTION VESSEL - CDS&rdquo;. mr_number_mismatches=[&ldquo;MR-023&rdquo;].</td></tr>
+<tr><td><code>test_section_classifier.py</code></td><td>16 matched (all number_prefix/high). 1 unnumbered (name_heuristic). missing=[ ]. mr_index_count=16.</td></tr>
+<tr><td><code>test_standards_extractor.py</code></td><td>4 subfolder categories. std_dwg_count=5.</td></tr>
+<tr><td><code>test_bom_extractor.py</code></td><td>1 line item. tag=K18-D-0003. 9COM=6000002521. design code includes ASME VIII DIV1.</td></tr>
+<tr><td><code>test_rvl_extractor.py</code></td><td>&ge;10 vendors. Includes &ldquo;GEYAD FACTORY&rdquo;. Countries include SA, DE, JP. MR-023 in filename.</td></tr>
+<tr><td><code>test_compliance_extractor.py</code></td><td>mr_number=SA-AYPP-6-MR-022. 9COM=6000002521. Sections include GENERAL, STANDARDS AND CODES.</td></tr>
+<tr><td><code>test_cross_checks.py</code></td><td>PACKAGE_MR_vs_RVL_MR = &ldquo;warn&rdquo;. BOM_9COM_vs_RVL_9COM = &ldquo;pass&rdquo;. MR_INDEX_COMPLETENESS = &ldquo;pass&rdquo;.</td></tr>
+</tbody>
+</table>
+
+<h3>10.3 E2E test</h3>
+<pre>def test_package_parse_envelope_shape():
+    envelope = PackageParserOrchestrator().parse(FIXTURE_PATH.as_posix(), "RFQ-PKG-E2E")
+
+    assert envelope["parser_version"] == "package-parser-v1.0"
+    inv = envelope["package_inventory"]
+    assert inv["total_files"] == 55
+    assert inv["total_files_raw"] == 56
+    assert inv["system_file_count"] == 1
+
+    ident = envelope["package_identity"]
+    assert ident["mr_number"] == "SA-AYPP-6-MR-022"
+    assert ident["mr_number_mismatches"] == ["MR-023"]
+
+    reg = envelope["section_registry"]
+    assert reg["numbered_section_count"] == 16
+    assert reg["missing_canonical_sections"] == []
+
+    assert envelope["bom_profile"] is not None
+    assert envelope["rvl_profile"] is not None
+
+    checks = envelope["parser_report"]["cross_checks"]
+    codes = [c["code"] for c in checks]
+    assert "PACKAGE_MR_vs_RVL_MR" in codes
+    mr_check = next(c for c in checks if c["code"] == "PACKAGE_MR_vs_RVL_MR")
+    assert mr_check["status"] == "warn"</pre>
+
+<h2 id="s11"><span class="n">11</span> Implementation Sequence</h2>
+
+<div class="cb c-cyan"><div class="ct">Prerequisite</div>
+All existing tests pass. Golden reference package in fixtures. openpyxl + python-docx in requirements.txt.</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 1 &mdash; Foundation (Steps 1&ndash;3)</div>
+  <h4>Step 1: Module skeleton + contracts</h4>
+  <p>Create <code>src/services/package_parser/</code> with <code>__init__.py</code>, <code>contracts.py</code> (all frozen dataclasses from Pack &sect;04 verbatim), <code>issues.py</code>, <code>normalizers.py</code>.</p>
+  <p><strong>Deliverable:</strong> <code>from src.services.package_parser.contracts import PackageParseEnvelope</code> imports cleanly.</p>
+
+  <h4>Step 2: Tree scanner + identity extractor</h4>
+  <p>Create <code>scanners/tree_scanner.py</code> + <code>extractors/identity_extractor.py</code> + tests.</p>
+  <p><strong>Deliverable:</strong> <code>test_tree_scanner.py</code> and <code>test_identity_extractor.py</code> pass.</p>
+
+  <h4>Step 3: Section classifier</h4>
+  <p>Create <code>extractors/section_classifier.py</code> + test. Number prefix + alias heuristic from Pack &sect;05.</p>
+  <p><strong>Deliverable:</strong> <code>test_section_classifier.py</code> passes.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 2 &mdash; Extractors (Steps 4&ndash;7)</div>
+  <h4>Step 4: Standards extractor</h4>
+  <p><strong>Deliverable:</strong> <code>test_standards_extractor.py</code> passes.</p>
+
+  <h4>Step 5: BOM extractor</h4>
+  <p><strong>Deliverable:</strong> <code>test_bom_extractor.py</code> passes. Tag K18-D-0003 extracted.</p>
+
+  <h4>Step 6: RVL extractor</h4>
+  <p><strong>Deliverable:</strong> <code>test_rvl_extractor.py</code> passes. &ge;10 vendors, MR-023 detected.</p>
+
+  <h4>Step 7: Compliance + SA-175 extractors</h4>
+  <p><strong>Deliverable:</strong> <code>test_compliance_extractor.py</code> passes.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 3 &mdash; Assembly + Cross-checks (Steps 8&ndash;9)</div>
+  <h4>Step 8: Cross-checks + assembler + orchestrator</h4>
+  <p><strong>Deliverable:</strong> <code>test_cross_checks.py</code> and <code>test_parser_orchestrator_e2e.py</code> pass. MR mismatch flagged.</p>
+
+  <h4>Step 9: ZIP scanner</h4>
+  <p><strong>Deliverable:</strong> ZIP input produces identical envelope to directory input.</p>
+</div>
+
+<div class="phase">
+  <div class="phase-num">Phase 4 &mdash; Service Integration (Steps 10&ndash;11)</div>
+  <h4>Step 10: Manager connector + intake service enrichment</h4>
+  <p><strong>Deliverable:</strong> Enriched <code>rfq_intake_profile</code> (Pack &sect;09 shape). Stub fallback still works.</p>
+
+  <h4>Step 11: Briefing service &mdash; deterministic-enriched v1</h4>
+  <p><strong>Deliverable:</strong> Briefing contains standards counts, vendor summary, review flags. Labeled <code>deterministic_enriched_v1</code>. Existing lifecycle handler tests still pass.</p>
+</div>
+
+<div class="cb c-purple"><div class="ct">After v1.0</div>
+Package parser produces deterministic inventory + extraction. Enriched <code>rfq_intake_profile</code> and deterministic-enriched <code>intelligence_briefing</code> contain real data from the ZIP lane. Next: validate against a second MR package to promote rules from <code>validated_against: 1_sample</code> to <code>multi_sample</code>.</div>
+
+</div>
+</body>
+</html>
