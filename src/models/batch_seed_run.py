@@ -6,7 +6,7 @@ import uuid as _uuid
 
 from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, func
 
-from src.models.artifact import GUID, JSONContent
+from src.models.artifact import JSONContent
 from src.database import Base
 
 
@@ -15,7 +15,8 @@ class BatchSeedRun(Base):
 
     __tablename__ = "batch_seed_runs"
 
-    id = Column(GUID(), primary_key=True, default=_uuid.uuid4)
+    # Keep id as string to match migration 004 and avoid UUID/String casting issues.
+    id = Column(String(36), primary_key=True, default=lambda: str(_uuid.uuid4()))
     run_id = Column(String(64), nullable=False, unique=True, index=True)
     run_type = Column(String(64), nullable=False)
     parser_version = Column(String(64), nullable=True)
