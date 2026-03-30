@@ -38,7 +38,7 @@ class FileEntry:
     mr_number_in_filename: str | None = None
     section_prefix: str | None = None
     is_system_file: bool = False
-    root_role: str | None = None
+    root_role: RootFileRole | None = None
 
 
 @dataclass(frozen=True)
