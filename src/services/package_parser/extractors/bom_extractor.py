@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import re
-import tempfile
-from typing import Iterable
 from pathlib import Path
+from typing import Iterable
 
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
@@ -54,17 +53,18 @@ _STRONG_HEADER_FIELDS = {
 class BomExtractor:
     """Extract BOM workbook contents from the canonical folder 02 section."""
 
-    def extract(self, inventory: PackageInventory, registry: SectionRegistry) -> BomProfile | None:
+    def extract(
+        self,
+        inventory: PackageInventory,
+        registry: SectionRegistry,
+        package_root: Path,
+    ) -> BomProfile | None:
         section = self._find_bom_section(registry)
         if section is None:
             return None
 
         bom_file = self._find_bom_workbook(inventory, section)
         if bom_file is None:
-            return None
-
-        package_root = self._resolve_package_root(inventory, bom_file)
-        if package_root is None:
             return None
 
         try:
@@ -116,34 +116,6 @@ class BomExtractor:
         if not candidates:
             return None
         return sorted(candidates, key=lambda item: item.relative_path.lower())[0]
-
-    def _resolve_package_root(self, inventory: PackageInventory, target_file: FileEntry) -> Path | None:
-        direct_candidates = [
-            Path.cwd() / inventory.package_root_name,
-            Path(tempfile.gettempdir()) / inventory.package_root_name,
-        ]
-        for candidate in direct_candidates:
-            if candidate.is_dir() and (candidate / target_file.relative_path).exists():
-                return candidate
-
-        search_bases = [Path.cwd(), Path(tempfile.gettempdir())]
-        for base_path in search_bases:
-            try:
-                matches = sorted(
-                    (
-                        path
-                        for path in base_path.rglob(inventory.package_root_name)
-                        if path.is_dir() and (path / target_file.relative_path).exists()
-                    ),
-                    key=lambda path: str(path).lower(),
-                )
-            except OSError:
-                continue
-
-            if matches:
-                return matches[0]
-
-        return None
 
     def _find_target_sheet(self, workbook) -> tuple[object | None, int | None, dict[str, int] | None]:
         preferred_sheets = [

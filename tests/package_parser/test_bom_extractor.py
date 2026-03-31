@@ -27,10 +27,11 @@ def _fixture_package_root() -> Path:
 
 
 def test_bom_extractor_parses_real_fixture_bom_workbook() -> None:
-    inventory = TreeScanner().scan(_fixture_package_root())
+    fixture_root = _fixture_package_root()
+    inventory = TreeScanner().scan(fixture_root)
     registry = SectionClassifier().classify(inventory)
 
-    bom_profile = BomExtractor().extract(inventory, registry)
+    bom_profile = BomExtractor().extract(inventory, registry, fixture_root)
 
     assert bom_profile is not None
     assert bom_profile.source_file == (
@@ -107,7 +108,7 @@ def test_bom_extractor_parses_synthetic_workbook_without_sample_specific_assumpt
     inventory = TreeScanner().scan(package_root)
     registry = SectionClassifier().classify(inventory)
 
-    bom_profile = BomExtractor().extract(inventory, registry)
+    bom_profile = BomExtractor().extract(inventory, registry, package_root)
 
     assert bom_profile is not None
     assert bom_profile.source_file == "02-MR Description-BOM/02_bom_export.xlsx"
