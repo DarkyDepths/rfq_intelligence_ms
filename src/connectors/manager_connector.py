@@ -123,3 +123,26 @@ class ManagerConnector:
         raise FileNotFoundError(
             f"Could not resolve workbook reference '{workbook_ref}' to a local fixture path."
         )
+
+    def fetch_package_local_path(self, package_ref: str) -> Path:
+        """Resolve package reference to a local development fixture path."""
+        if package_ref and Path(package_ref).exists():
+            return Path(package_ref).resolve()
+
+        fixture_package_root = (
+            self._local_fixtures_root()
+            / "rfq_created"
+            / "source_package_sample_001"
+            / "SA-AYPP-6-MR-022_COLLECTION VESSEL - CDS-REV-00"
+        )
+        local_ref_map = {
+            "local://source_package_sample_001": fixture_package_root,
+        }
+
+        resolved = local_ref_map.get(package_ref)
+        if resolved is not None and resolved.exists():
+            return resolved.resolve()
+
+        raise FileNotFoundError(
+            f"Could not resolve package reference '{package_ref}' to a local fixture path."
+        )
