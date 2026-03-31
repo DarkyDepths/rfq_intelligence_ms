@@ -40,7 +40,11 @@ class StandardsExtractor:
 
         section_prefix = f"{section.folder_relative_path}/"
         for file_entry in inventory.files:
-            if file_entry.is_system_file or not file_entry.relative_path.startswith(section_prefix):
+            if (
+                file_entry.is_system_file
+                or file_entry.is_mr_index
+                or not file_entry.relative_path.startswith(section_prefix)
+            ):
                 continue
 
             reference = self._build_reference(

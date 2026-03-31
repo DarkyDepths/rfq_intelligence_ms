@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
-from src.services.package_parser.contracts import SectionRegistry
+from src.services.package_parser.contracts import (
+    FileEntry,
+    FolderEntry,
+    PackageInventory,
+    SectionMatch,
+    SectionRegistry,
+)
 from src.services.package_parser.extractors.section_classifier import SectionClassifier
 from src.services.package_parser.extractors.standards_extractor import StandardsExtractor
 from src.services.package_parser.scanners.tree_scanner import TreeScanner
 
 
 _PACKAGE_ROOT_NAME = "SA-AYPP-6-MR-022_COLLECTION VESSEL - CDS-REV-00"
-_SAMSS_RE = re.compile(r"SAMSS[-_]?(\d{3})", re.IGNORECASE)
-_SAES_RE = re.compile(r"SAES[-_]?([A-Z][-_]\d{3})", re.IGNORECASE)
-_SAEP_RE = re.compile(r"SAEP[-_]?(\d+)", re.IGNORECASE)
-_STD_DWG_RE = re.compile(r"STD[\s._-]*DWG(?:[-_\s]*([A-Z0-9][A-Z0-9._-]*))?", re.IGNORECASE)
 
 
 def _fixture_package_root() -> Path:
@@ -45,20 +46,10 @@ def test_standards_extractor_parses_fixture_applicable_standards_section() -> No
 
     assert profile is not None
     assert profile.subfolder_structure == ["1. SAMSS", "2. SAES", "3. SAEP", "4. STD DWG"]
-
-    expected_counts = _expected_counts_from_fixture(inventory, applicable_section.folder_relative_path)
-    assert profile.total_count == expected_counts["total"]
-    assert profile.samss_count == expected_counts["samss"]
-    assert profile.saes_count == expected_counts["saes"]
-    assert profile.saep_count == expected_counts["saep"]
-    assert profile.std_dwg_count == expected_counts["std_dwg"]
-    assert len(profile.other) == expected_counts["other"]
-
     assert profile.total_count == 37
     assert profile.samss_count == 9
     assert profile.saes_count == 19
     assert profile.saep_count == 9
-    assert profile.std_dwg_count == 0
     assert len(profile.other) == 0
 
     samss_by_filename = {reference.filename: reference for reference in profile.samss}
@@ -78,6 +69,102 @@ def test_standards_extractor_parses_fixture_applicable_standards_section() -> No
         *profile.other,
     ]
     assert all(reference.extraction_method == "filename_regex" for reference in all_references)
+    assert all(not reference.filename.lower().startswith("mr index") for reference in all_references)
+
+
+def test_standards_extractor_excludes_mr_index_and_uses_std_dwg_subfolder_fallback() -> None:
+    inventory = PackageInventory(
+        package_root_name="sample-package",
+        input_type="directory",
+        total_files=2,
+        total_files_raw=2,
+        total_folders=2,
+        total_size_bytes=2,
+        files=[
+            FileEntry(
+                relative_path="06-Applicable Standards/MR Index 06.pdf",
+                filename="MR Index 06.pdf",
+                extension=".pdf",
+                size_bytes=1,
+                depth=1,
+                parent_folder="06-Applicable Standards",
+                is_mr_index=True,
+                mr_number_in_filename=None,
+                section_prefix=None,
+                is_system_file=False,
+                root_role=None,
+            ),
+            FileEntry(
+                relative_path="06-Applicable Standards/4. STD DWG/VESSEL-GA-001.pdf",
+                filename="VESSEL-GA-001.pdf",
+                extension=".pdf",
+                size_bytes=1,
+                depth=2,
+                parent_folder="4. STD DWG",
+                is_mr_index=False,
+                mr_number_in_filename=None,
+                section_prefix=None,
+                is_system_file=False,
+                root_role=None,
+            ),
+        ],
+        folders=[
+            FolderEntry(
+                relative_path="06-Applicable Standards",
+                name="06-Applicable Standards",
+                depth=0,
+                file_count=1,
+                subfolder_count=1,
+                number_prefix=6,
+                label="Applicable Standards",
+            ),
+            FolderEntry(
+                relative_path="06-Applicable Standards/4. STD DWG",
+                name="4. STD DWG",
+                depth=1,
+                file_count=1,
+                subfolder_count=0,
+                number_prefix=None,
+                label=None,
+            ),
+        ],
+        root_files=[],
+        file_extension_counts={".pdf": 2},
+        system_file_count=0,
+        scanned_at="2026-03-31T00:00:00+00:00",
+    )
+    registry = SectionRegistry(
+        matched_sections=[
+            SectionMatch(
+                folder_name="06-Applicable Standards",
+                folder_relative_path="06-Applicable Standards",
+                canonical_key="applicable_standards",
+                match_method="number_prefix",
+                match_confidence="high",
+                number_prefix=6,
+                file_count=1,
+                mr_index_present=True,
+                has_subfolders=True,
+            )
+        ],
+        unmatched_folders=[],
+        missing_canonical_sections=[],
+        numbered_section_count=1,
+        unnumbered_section_count=0,
+        total_mr_index_count=1,
+    )
+
+    profile = StandardsExtractor().extract(inventory, registry)
+
+    assert profile is not None
+    assert profile.total_count == 1
+    assert profile.std_dwg_count == 1
+    assert profile.subfolder_structure == ["4. STD DWG"]
+    assert [reference.filename for reference in profile.std_dwg] == ["VESSEL-GA-001.pdf"]
+    assert profile.std_dwg[0].standard_id == "VESSEL-GA-001"
+    assert all(reference.filename != "MR Index 06.pdf" for reference in profile.std_dwg)
+    assert all(reference.filename != "MR Index 06.pdf" for reference in profile.other)
+    assert all(reference.extraction_method == "filename_regex" for reference in profile.std_dwg)
 
 
 def test_standards_extractor_returns_none_when_section_is_absent() -> None:
@@ -97,26 +184,3 @@ def test_standards_extractor_returns_none_when_section_is_absent() -> None:
     )
 
     assert StandardsExtractor().extract(inventory, registry_without_standards) is None
-
-
-def _expected_counts_from_fixture(inventory, section_relative_path: str) -> dict[str, int]:
-    counts = {"samss": 0, "saes": 0, "saep": 0, "std_dwg": 0, "other": 0, "total": 0}
-    section_prefix = f"{section_relative_path}/"
-
-    for file_entry in inventory.files:
-        if file_entry.is_system_file or not file_entry.relative_path.startswith(section_prefix):
-            continue
-
-        counts["total"] += 1
-        if _SAMSS_RE.search(file_entry.filename) is not None:
-            counts["samss"] += 1
-        elif _SAES_RE.search(file_entry.filename) is not None:
-            counts["saes"] += 1
-        elif _SAEP_RE.search(file_entry.filename) is not None:
-            counts["saep"] += 1
-        elif _STD_DWG_RE.search(file_entry.filename) is not None:
-            counts["std_dwg"] += 1
-        else:
-            counts["other"] += 1
-
-    return counts
