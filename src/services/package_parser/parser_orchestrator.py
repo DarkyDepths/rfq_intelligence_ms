@@ -16,6 +16,7 @@ from src.services.package_parser.extractors.section_classifier import SectionCla
 from src.services.package_parser.extractors.standards_extractor import StandardsExtractor
 from src.services.package_parser.issues import ParserIssue
 from src.services.package_parser.scanners.tree_scanner import TreeScanner
+from src.services.package_parser.scanners.zip_scanner import ZipScanner
 
 
 class PackageParserOrchestrator:
@@ -23,6 +24,7 @@ class PackageParserOrchestrator:
 
     def __init__(self) -> None:
         self._scanner = TreeScanner()
+        self._zip_scanner = ZipScanner()
         self._identity_extractor = IdentityExtractor()
         self._section_classifier = SectionClassifier()
         self._standards_extractor = StandardsExtractor()
@@ -33,8 +35,15 @@ class PackageParserOrchestrator:
 
     def parse(self, package_root_path: str | Path, rfq_id: str) -> dict:
         package_root = Path(package_root_path)
+        if package_root.suffix.lower() == ".zip":
+            with self._zip_scanner.open_package(package_root) as (resolved_root, inventory):
+                return self._parse_inventory(resolved_root, inventory, rfq_id)
+        if package_root.is_dir():
+            inventory = self._scanner.scan(package_root)
+            return self._parse_inventory(package_root, inventory, rfq_id)
+        raise ValueError(f"Unsupported input: {package_root_path}")
 
-        inventory = self._scanner.scan(package_root)
+    def _parse_inventory(self, package_root: Path, inventory, rfq_id: str) -> dict:
         identity = self._identity_extractor.extract(inventory)
         registry = self._section_classifier.classify(inventory)
 
