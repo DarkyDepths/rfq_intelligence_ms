@@ -42,6 +42,7 @@ from src.translators.artifact_translator import ArtifactTranslator
 # ── Controllers ───────────────────────────────────────
 from src.controllers.intelligence_controller import IntelligenceController
 from src.controllers.batch_seed_run_controller import BatchSeedRunController
+from src.controllers.manual_lifecycle_controller import ManualLifecycleController
 from src.controllers.reprocess_controller import ReprocessController
 from src.controllers.workbook_parse_controller import WorkbookParseController
 
@@ -196,6 +197,16 @@ def get_batch_seed_run_controller(
     read_service: BatchSeedRunReadService = Depends(get_batch_seed_run_read_service),
 ) -> BatchSeedRunController:
     return BatchSeedRunController(read_service=read_service)
+
+
+def get_manual_lifecycle_controller(
+    lifecycle_handlers: LifecycleHandlers = Depends(get_lifecycle_handlers),
+    manager_connector: ManagerConnector = Depends(get_manager_connector),
+) -> ManualLifecycleController:
+    return ManualLifecycleController(
+        lifecycle_handlers=lifecycle_handlers,
+        manager_connector=manager_connector,
+    )
 
 
 def get_workbook_parser_orchestrator() -> WorkbookParserOrchestrator:
