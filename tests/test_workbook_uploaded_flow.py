@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 
-from src.connectors.manager_connector import ManagerConnector
 from src.datasources.artifact_datasource import ArtifactDatasource
 from src.datasources.processed_event_datasource import ProcessedEventDatasource
 from src.event_handlers.lifecycle_handlers import LifecycleHandlers
@@ -15,13 +14,14 @@ from src.services.review_service import ReviewService
 from src.services.snapshot_service import SnapshotService
 from src.services.workbook_parser import compute_structure
 from src.services.workbook_service import WorkbookService
+from tests.support_manager_connector import LocalFixtureManagerConnector
 
 
 def _build_services(db_session):
     datasource = ArtifactDatasource(db_session)
     processed_event_datasource = ProcessedEventDatasource(db_session)
     event_processing_service = EventProcessingService(processed_event_datasource)
-    connector = ManagerConnector(base_url="http://manager")
+    connector = LocalFixtureManagerConnector()
     intake_service = IntakeService(datasource=datasource, connector=connector)
     briefing_service = BriefingService(datasource=datasource)
     workbook_service = WorkbookService(datasource=datasource, connector=connector)

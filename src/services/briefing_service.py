@@ -9,7 +9,7 @@ Responsibility:
     active sections (document understanding, compliance/risk) and unavailable
     sections (similarity, cost envelope) clearly marked.
 
-Current status: STUB — not yet implemented.
+Current status: partially implemented for the current intake-driven V1 briefing slice.
 
 TODO:
     - Executive summary generation

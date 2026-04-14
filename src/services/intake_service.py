@@ -8,7 +8,8 @@ Responsibility:
     Combines deterministic extraction (folder tree, BOM, standards filenames) with
     LLM extraction for unstructured documents when needed.
 
-Current status: STUB — not yet implemented.
+Current status: partially implemented for deterministic V1 intake parsing and
+truthful fallback content when only manager references are available.
 
 TODO:
     - Intake parsing pipeline

@@ -9,11 +9,15 @@ a plain JSON column in SQLite via SQLAlchemy's TypeDecorator fallback.
 For production tests against PostgreSQL, use a real test database.
 """
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+
+os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 
 from src.app import create_app
 from src.database import Base, get_db

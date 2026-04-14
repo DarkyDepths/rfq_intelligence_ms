@@ -17,7 +17,8 @@ Responsibility:
     NOT as separate events triggering each other (avoids infinite loops and
     race conditions).
 
-Current status: STUB — not yet wired to an event bus.
+Current status: operational for manual-trigger and direct-handler flows; not yet
+wired to an autonomous event bus consumer.
 
 TODO:
     - Wire to event bus consumer (polling, webhook, or message queue)

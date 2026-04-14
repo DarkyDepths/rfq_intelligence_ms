@@ -1,114 +1,124 @@
 # rfq_intelligence_ms
 
-A separate, read-heavy analytical microservice that transforms RFQ source material and historical records into persistent intelligence artifacts for multiple consumers (UI, chatbot, dashboards).
+A separate, read-heavy analytical microservice that transforms RFQ source
+material and historical records into persistent intelligence artifacts for
+multiple consumers such as the UI, chatbot, and dashboards.
 
-**Current status: Skeleton only — no business logic implemented yet.**
+Current status: partial but operational V1 slices are implemented.
 
----
+Today the service can build and persist:
+- `rfq_intake_profile`
+- `intelligence_briefing`
+- `workbook_profile`
+- `cost_breakdown_profile`
+- `parser_report`
+- `workbook_review_report`
+- `rfq_analytical_record`
+- `rfq_intelligence_snapshot`
+
+What is still transitional:
+- manual lifecycle trigger routes are still the active integration bridge
+- manual reprocess endpoints are still accepted/stubbed, not fully executed
+- autonomous event-bus ingestion is not wired yet
 
 ## What This Service Owns
 
-- Document / RFQ parsing (triggered by events from manager)
-- Intelligence artifact creation, versioning, persistence
-- Analytical projections (snapshot read model)
-- Historical enrichment (analytical record)
+- Document and RFQ parsing triggered from manager-side lifecycle events
+- Intelligence artifact creation, versioning, and persistence
+- Analytical projections such as the snapshot read model
+- Historical enrichment through the analytical record
 - Read APIs for intelligence consumers
 
-## What This Service Does NOT Own
+## What This Service Does Not Own
 
-- RFQ lifecycle state, workflows, stages, reminders → `rfq_manager_ms`
-- File storage (Azure Blob) → `rfq_manager_ms`
-- Chatbot sessions, intent detection → `rfq_chatbot_ms`
-- IAM / authentication
-- Operational decisions or workflow execution
+- RFQ lifecycle state, workflows, stages, and reminders: `rfq_manager_ms`
+- File storage: `rfq_manager_ms`
+- Chatbot sessions and intent detection: `rfq_chatbot_ms`
+- IAM and authentication
+- Operational workflow execution
 
----
+## Core Intelligence Artifacts
 
-## Core Intelligence Artifacts (6)
+| Artifact | Role |
+|---|---|
+| `rfq_intake_profile` | Structured extraction from the source package |
+| `intelligence_briefing` | Proactive dossier generated on RFQ creation |
+| `workbook_profile` | Structured extraction from the GHI estimation workbook |
+| `workbook_review_report` | Bridge artifact comparing intake vs workbook |
+| `rfq_intelligence_snapshot` | Consumer-facing read model per RFQ |
+| `rfq_analytical_record` | Historical enrichment seed, not directly user-facing |
+| `cost_breakdown_profile` | Cost decomposition emitted by the workbook parser |
+| `parser_report` | Parser execution and failure metadata |
 
-| # | Artifact | Role |
-|---|----------|------|
-| 1 | `rfq_intake_profile` | Structured extraction from ZIP/MR package |
-| 2 | `intelligence_briefing` | Proactive dossier generated on RFQ creation |
-| 3 | `workbook_profile` | Structured extraction from GHI estimation workbook |
-| 4 | `workbook_review_report` | Bridge artifact comparing intake vs workbook |
-| 5 | `rfq_intelligence_snapshot` | Consumer-facing read model per RFQ |
-| 6 | `rfq_analytical_record` | Historical enrichment seed (not user-facing) |
+## API Endpoints
 
----
-
-## Parser Support Artifacts (2)
-
-| # | Artifact | Role |
-|---|----------|------|
-| 7 | `cost_breakdown_profile` | Cost decomposition emitted from deterministic workbook parser |
-| 8 | `parser_report` | Parser execution/report metadata for workbook parsing |
-
----
-
-## API Endpoints (V1)
-
-| Method | Endpoint | Status Code | Purpose |
-|--------|----------|-------------|---------|
-| GET | `/intelligence/v1/rfqs/{rfq_id}/snapshot` | 200 / 404 | Main entry point — returns snapshot |
-| GET | `/intelligence/v1/rfqs/{rfq_id}/briefing` | 200 / 404 | Latest intelligence briefing |
-| GET | `/intelligence/v1/rfqs/{rfq_id}/workbook-profile` | 200 / 404 | Latest workbook profile |
-| GET | `/intelligence/v1/rfqs/{rfq_id}/workbook-review` | 200 / 404 | Latest workbook review report |
-| POST | `/intelligence/v1/rfqs/{rfq_id}/reprocess/intake` | 202 | Manual re-run of intake parsing |
-| POST | `/intelligence/v1/rfqs/{rfq_id}/reprocess/workbook` | 202 | Manual re-run of workbook parsing |
-| GET | `/intelligence/v1/rfqs/{rfq_id}/artifacts` | 200 | Artifact index with versions/statuses |
-| GET | `/health` | 200 | Health check |
-
----
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/intelligence/v1/rfqs/{rfq_id}/snapshot` | Main consumer snapshot |
+| GET | `/intelligence/v1/rfqs/{rfq_id}/briefing` | Latest intelligence briefing |
+| GET | `/intelligence/v1/rfqs/{rfq_id}/workbook-profile` | Latest workbook profile |
+| GET | `/intelligence/v1/rfqs/{rfq_id}/workbook-review` | Latest workbook review report |
+| GET | `/intelligence/v1/rfqs/{rfq_id}/artifacts` | Artifact index with versions and statuses |
+| POST | `/intelligence/v1/rfqs/{rfq_id}/reprocess/intake` | Manual re-run request accepted, still stubbed |
+| POST | `/intelligence/v1/rfqs/{rfq_id}/reprocess/workbook` | Manual re-run request accepted, still stubbed |
+| POST | `/intelligence/v1/rfqs/{rfq_id}/trigger/intake` | Manual lifecycle bridge for current integrated flows |
+| POST | `/intelligence/v1/rfqs/{rfq_id}/trigger/workbook` | Manual lifecycle bridge for current integrated flows |
+| POST | `/intelligence/v1/rfqs/{rfq_id}/trigger/outcome` | Manual lifecycle bridge for current integrated flows |
+| GET | `/health` | Health check |
 
 ## Running Locally
 
-### With Docker Compose
+### Integrated platform path
+
+For the real RFQMGMT local platform flow, prefer the scenario stack:
+
+```bash
+python d:\PFE\scripts\rfqmgmt_scenario_stack.py all --seed-set full
+```
+
+That path brings up:
+- manager at `http://localhost:18000`
+- intelligence at `http://localhost:18001`
+
+It also aligns seeded scenarios and mounts manager uploads into intelligence.
+
+### Standalone intelligence compose
 
 ```bash
 docker-compose up --build
-# API available at http://localhost:8001
-# DB available at localhost:5433
 ```
 
-The API container automatically runs `alembic upgrade head` on startup.
+The API is then available at `http://localhost:8001`, and the container expects
+the manager API to be reachable at `http://host.docker.internal:18000`.
 
 ### Without Docker
 
 ```bash
-# 1. Start PostgreSQL (port 5433, db: rfq_intelligence_db)
-
-# 2. Create .env from template
 cp .env.example .env
-
-# 3. Install dependencies
 pip install -r requirements.txt
-
-# 4. Run migrations
 alembic upgrade head
-
-# 5. Start the server
 uvicorn src.app:app --port 8001 --reload
 ```
 
-### Running Tests
+## Running Tests
 
 ```bash
 pip install -r requirements-dev.txt
 pytest
 ```
 
----
+The test suite now defaults to an in-memory SQLite `DATABASE_URL` when one is
+not already provided by the shell.
 
 ## Architecture
 
-Follows the **BACAB layered pattern** consistent with `rfq_manager_ms`:
+The service follows the BACAB layered pattern used in `rfq_manager_ms`.
 
+```text
+HTTP path:  routes -> controllers -> services -> datasources/connectors
+Event path: event_handlers -> services -> datasources/connectors
 ```
-HTTP path:    routes → controllers → services → datasources/connectors
-Event path:   event_handlers → services → datasources/connectors
-```
 
-Controllers and event handlers do not access datasources directly; services are the required boundary.
-
-Own PostgreSQL database (separate from manager). JSONB artifact storage with versioning.
+Controllers and event handlers do not access datasources directly. The service
+owns its own PostgreSQL database and stores intelligence artifacts as versioned
+records.

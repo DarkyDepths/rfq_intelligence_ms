@@ -12,7 +12,8 @@ Responsibility:
 
     Every finding phrased as "this deserves review," never "this is wrong."
 
-Current status: STUB — not yet implemented.
+Current status: partially implemented for structural workbook review and honest
+cold-start suppression of dormant analysis families.
 
 TODO:
     - Family 1: structural completeness checks (missing sheets, cost lines, totals)
