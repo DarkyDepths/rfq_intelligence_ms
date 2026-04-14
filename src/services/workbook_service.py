@@ -8,7 +8,8 @@ Responsibility:
     the workbook_profile artifact. The cleanest V1 artifact because the
     workbook template is fixed and deterministic to parse.
 
-Current status: STUB — not yet implemented.
+Current status: implemented for the deterministic workbook parser slice, parser
+report persistence, and truthful failure handling.
 
 TODO:
     - Workbook structure validation (expected sheets vs found)

@@ -12,7 +12,8 @@ Responsibility:
     For V1 skeleton: snapshot follows the same shared artifact-table pattern
     as all other artifacts including version and is_current.
 
-Current status: STUB — not yet implemented.
+Current status: implemented for current V1 artifact availability and consumer-facing
+snapshot assembly.
 
 TODO:
     - Artifact reference assembly (latest version + status of each artifact)

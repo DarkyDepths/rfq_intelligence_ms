@@ -28,7 +28,7 @@ services:
       ENVIRONMENT: development
       APP_DEBUG: "false"
       CORS_ORIGINS: "*"
-      MANAGER_MS_BASE_URL: http://host.docker.internal:8000
+      MANAGER_MS_BASE_URL: http://host.docker.internal:18000
     ports:
       - "8001:8001"
     depends_on:

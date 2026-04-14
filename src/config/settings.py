@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     APP_DEBUG: bool = False
     ENVIRONMENT: str = "development"
     CORS_ORIGINS: str = "*"
-    MANAGER_MS_BASE_URL: str = "http://localhost:8000"
+    MANAGER_MS_BASE_URL: str = "http://localhost:18000"
     MANAGER_REQUEST_TIMEOUT_SECONDS: float = 10.0
     MANAGER_UPLOADS_MOUNT_PATH: str = "/app/manager_uploads"
 

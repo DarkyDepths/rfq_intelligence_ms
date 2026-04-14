@@ -1,1 +1,1 @@
-"""tests — Test suite for rfq_intelligence_ms."""
+# Test package marker for stable pytest module names.
